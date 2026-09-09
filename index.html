@@ -1,0 +1,1361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Casino Master — V1.120</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#f4f6f8;color:#17202a}
+.app{display:flex;min-height:100vh}.side{width:240px;background:#101820;color:#fff;padding:20px;position:fixed;inset:0 auto 0 0}
+.brand{font-size:20px;font-weight:800;margin-bottom:25px}.brand small{display:block;color:#9fb0bd;font-size:11px;margin-top:4px}
+.nav a{display:block;width:100%;text-align:left;background:none;border:0;color:#c9d3da;padding:12px;border-radius:8px;margin:3px 0;cursor:pointer}
+.nav a:hover,.nav a.active{background:#263642;color:#fff}.main{margin-left:240px;width:calc(100% - 240px);padding:24px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.user{font-size:13px;color:#65727e}
+.cardgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{background:#fff;border:1px solid #e3e7eb;border-radius:12px;padding:18px;box-shadow:0 2px 8px #00000008}.label{font-size:12px;color:#71808c}.value{font-size:25px;font-weight:800;margin-top:8px}
+.panel{background:#fff;border:1px solid #e3e7eb;border-radius:12px;padding:20px;margin-top:18px}.panel h2{margin:0 0 15px;font-size:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:11px;border-bottom:1px solid #edf0f2;text-align:left}th{color:#687781;background:#fafbfc}
+input,select{padding:10px;border:1px solid #ccd5db;border-radius:7px;width:100%;background:#fff}.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field label{display:block;font-size:12px;color:#687781;margin-bottom:5px}
+.btn{border:0;border-radius:7px;padding:10px 14px;cursor:pointer;font-weight:700}.primary{background:#1f6feb;color:white}.success{background:#16855b;color:white}.warn{background:#b7791f;color:white}.muted{background:#e9eef2;color:#23313b}
+.actions{display:flex;gap:8px;margin-top:14px}.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}.toolbar input{max-width:360px}.small{font-size:12px;color:#687781}.danger{background:#b42318;color:#fff}.calcbox{background:#f7f9fb;border:1px solid #dce3e8;border-radius:8px;padding:14px;margin-top:12px}.calcbox strong{font-size:20px}.hint{font-size:12px;color:#687781;margin-top:5px}.locked{background:#eef2f5!important;color:#344054;font-weight:600}.locktag{font-size:11px;margin-left:6px}.pill{display:inline-block;padding:4px 8px;border-radius:20px;font-size:11px;background:#eaf2ff;color:#195bb5}
+@media(max-width:900px){.side{width:190px}.main{margin-left:190px;width:calc(100% - 190px)}.cardgrid{grid-template-columns:repeat(2,1fr)}.formgrid{grid-template-columns:1fr}}
+.login-overlay{position:fixed;inset:0;background:#101820;display:flex;align-items:center;justify-content:center;z-index:9999}.login-box{width:390px;max-width:92%;background:#fff;border-radius:14px;padding:28px;box-shadow:0 20px 60px #0008}.login-box h1{margin:0 0 6px;font-size:24px}.login-box p{margin:0 0 20px;color:#687781;font-size:13px}.login-box .field{margin-bottom:13px}.login-box .btn{width:100%;margin-top:6px}.login-error{color:#b42318;font-size:12px;min-height:18px;margin-top:8px}.user-menu{display:flex;gap:8px;align-items:center}.logout{background:#e9eef2;color:#23313b}.permission-note{background:#fff6e5;border:1px solid #f0d49a;padding:10px 12px;border-radius:8px;font-size:12px;color:#6d531b;margin-bottom:14px}
+.report-grid{display:grid;grid-template-columns:1fr;gap:18px}.report-section{background:#fff;border:1px solid #e3e7eb;border-radius:12px;padding:20px}.report-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.report-head h2{margin:0 0 4px}.report-actions{display:flex;gap:8px}.report-summary{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.report-box{border:1px solid #e1e6ea;border-radius:9px;padding:12px 16px;min-width:180px}.report-box b{display:block;font-size:20px;margin-top:4px}.report-empty{padding:12px 0;color:#687781;font-size:13px}@media print{.report-no-print{display:none!important}}</style>
+
+<style>
+.balance-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.balance-mini{border:1px solid #d8dee5;border-radius:10px;padding:12px;background:#fff}
+.balance-mini h3{margin:0 0 8px;font-size:15px}
+.balance-mini table{margin:0}
+@media(max-width:900px){.balance-pair{grid-template-columns:1fr}}
+</style>
+<script>
+(function(){
+ const key='casinoV113CleanData';
+ if(localStorage.getItem(key)!=='1'){
+   ['casinoBalances','casinoClosedBusinessDates','casinoTableDeductions','casinoTableOpeningClosing','casinoTableOperations','customers','tx'].forEach(k=>localStorage.removeItem(k));
+   localStorage.setItem(key,'1');
+ }
+})();
+</script>
+</head>
+<body>
+<div id="loginOverlay" class="login-overlay"><div class="login-box">
+<h1>CASINO MASTER</h1><p>Secure staff login — choose your assigned account.</p>
+<div class="field"><label>Username</label><input id="loginUsername" autocomplete="username"></div>
+<div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
+<button class="btn primary" type="button" onclick="loginUser()">LOGIN</button>
+<div id="loginError" class="login-error"></div>
+</div></div>
+<div class="app">
+<aside class="side"><div class="brand">CASINO MASTER<small>Version 1.116 Prototype</small></div><div class="nav" id="nav"></div></aside>
+<main class="main"><div class="top"><div><h1 id="title" style="margin:0;font-size:26px">Dashboard</h1><div id="subtitle" class="user">Central casino control</div></div><div class="user">Logged in: <b id="role">General Manager</b></div></div><div id="content"></div></main>
+</div>
+<script>
+/* V1.52 CLEAN DATA: this release starts with a genuinely empty demo database.
+   It clears test customers, transactions, rewards/loans (stored in tx), and rate history
+   once on first launch. User accounts are preserved so staff can log in normally. */
+(function(){
+  // V1.68 REPORT UPDATE: preserve the existing V1.67 test database exactly as-is.
+  // No data reset or migration is performed in this release.
+})();
+
+const roles={
+  "Reception":["dashboard","customers"],
+  "Pit Manager":["dashboard","customers","loans","rewards","reports","balance","tableopening","totaltable"],
+  "Cashier":["dashboard","customers","cashier","reports","balance","tableopening","totaltable","tablefillcredit"],
+  "Manager":["dashboard","customers","cashier","loans","rewards","reports","customerwise","balance","settings","tableopening","totaltable"]
+};
+const labels={dashboard:"Dashboard",customers:"Customers",cashier:"Cashier",loans:"Loans",rewards:"Rewards",reports:"Reports",customerwise:"Customer Wise Report",balance:"Daily Balance",settings:"Settings",tableopening:"Table Opening / Closing",totaltable:"Total Table Summary",tablefillcredit:"Table Fill / Credit Record"};
+const defaultUsers=[
+  {username:"manager",password:"Manager@123",name:"General Manager",role:"Manager",active:true},
+  {username:"reception",password:"Reception@123",name:"Reception",role:"Reception",active:true},
+  {username:"cashier",password:"Cashier@123",name:"Cashier",role:"Cashier",active:true},
+  {username:"pitmanager",password:"PitManager@123",name:"Pit Manager",role:"Pit Manager",active:true}
+];
+let authUsers=JSON.parse(localStorage.getItem("casinoUsers")||"null");
+if(!Array.isArray(authUsers)||!authUsers.length){
+  authUsers=defaultUsers.map(u=>({...u}));
+}else{
+  // V1.87: repair legacy/corrupt local account data while preserving other staff accounts.
+  authUsers=authUsers.filter(u=>u && typeof u==="object");
+  authUsers=authUsers.map(u=>({...u,username:String(u.username||"").trim().toLowerCase(),password:String(u.password||""),active:u.active!==false}));
+  const mi=authUsers.findIndex(u=>u.username==="manager");
+  if(mi<0) authUsers.unshift({...defaultUsers[0]});
+  else authUsers[mi]={...authUsers[mi],...defaultUsers[0],active:true};
+}
+localStorage.setItem("casinoUsers",JSON.stringify(authUsers));
+let currentUser=JSON.parse(sessionStorage.getItem("casinoCurrentUser")||"null");
+// V1.87: robust role detection for legacy/session records.
+function userRole(){
+  if(!currentUser) return "";
+  if(String(currentUser.username||"").toLowerCase()==="manager") return "Manager";
+  return String(currentUser.role||"");
+}
+function canManageTableSummary(){
+  if(!currentUser) return false;
+  const username=String(currentUser.username||"").trim().toLowerCase();
+  const sessionRole=String(currentUser.role||"").trim().toLowerCase().replace(/\s+/g," ");
+  const account=authUsers.find(u=>String(u?.username||"").trim().toLowerCase()===username);
+  const accountRole=String(account?.role||"").trim().toLowerCase().replace(/\s+/g," ");
+  return username==="manager" || sessionRole==="manager" || sessionRole==="pit manager" || sessionRole==="pitmanager" || accountRole==="manager" || accountRole==="pit manager" || accountRole==="pitmanager";
+}
+function hasPermission(page){const r=userRole();return !!currentUser && (roles[r]||[]).includes(page);}
+function requirePermission(page){if(!hasPermission(page)){alert("You do not have permission to access this section.");return false;}return true;}
+function loginUser(){
+  const u=(document.getElementById("loginUsername")?.value||"").trim().toLowerCase();
+  const p=document.getElementById("loginPassword")?.value||"";
+  const found=authUsers.find(x=>x && x.active!==false&&String(x.username||"").toLowerCase()===u&&String(x.password||"")===p);
+  const err=document.getElementById("loginError");
+  if(!found){if(err)err.textContent="Invalid username or password.";return;}
+  currentUser={username:found.username,name:found.name,role:(String(found.username||"").toLowerCase()==="manager"?"Manager":found.role)};
+  sessionStorage.setItem("casinoCurrentUser",JSON.stringify(currentUser));
+  document.getElementById("loginOverlay").style.display="none";
+  updateLoggedIn(); nav(); show("dashboard");
+}
+function logoutUser(){sessionStorage.removeItem("casinoCurrentUser");currentUser=null;document.getElementById("loginOverlay").style.display="flex";document.getElementById("loginUsername").value="";document.getElementById("loginPassword").value="";document.getElementById("loginError").textContent="";nav();}
+function updateLoggedIn(){const e=document.getElementById("role");if(e)e.innerHTML=`${currentUser?.name||""} <span class="pill">${currentUser?.role||""}</span> <button class="btn logout" style="margin-left:8px;padding:6px 10px" onclick="logoutUser()">Logout</button>`;}
+function manageUsers(){
+ if(!requirePermission("settings"))return;
+ const c=document.getElementById("content");
+ c.innerHTML=`<div class="panel"><h2>User Accounts & Permissions</h2><div class="permission-note">Manager only. Passwords in this prototype are stored locally. In the production cloud version, authentication will be server-side with securely hashed passwords.</div>
+ <div class="formgrid"><div class="field"><label>Username *</label><input id="newUsername"></div><div class="field"><label>Display Name *</label><input id="newName"></div><div class="field"><label>Role *</label><select id="newRole"><option>Manager</option><option>Reception</option><option>Cashier</option><option>Pit Manager</option></select></div><div class="field"><label>Password *</label><input id="newPassword" type="password"></div></div><div class="actions"><button class="btn primary" onclick="addUserAccount()">Create User</button></div></div>
+ <div class="panel"><h2>Existing User Accounts</h2>${authUsers.map((u,i)=>`<div style="padding:12px 0;border-bottom:1px solid #edf0f2"><b>${u.name}</b> — ${u.username} — <span class="pill">${u.role}</span> — ${u.active===false?"Disabled":"Active"}<div class="actions"><button class="btn muted" onclick="toggleUser(${i})">${u.active===false?"Enable":"Disable"}</button>${u.username!==currentUser.username?`<button class="btn danger" onclick="deleteUser(${i})">Delete</button>`:""}</div></div>`).join("")}</div>`;
+}
+function addUserAccount(){const username=(document.getElementById("newUsername")?.value||"").trim().toLowerCase(),name=(document.getElementById("newName")?.value||"").trim(),role=document.getElementById("newRole")?.value,password=document.getElementById("newPassword")?.value||"";if(!username||!name||!password)return alert("Complete username, display name and password.");if(!/^[a-z0-9._-]{3,30}$/.test(username))return alert("Username must be 3-30 characters using letters, numbers, dot, underscore or hyphen.");if(authUsers.some(u=>u.username.toLowerCase()===username))return alert("Username already exists.");authUsers.push({username,name,role,password,active:true});localStorage.setItem("casinoUsers",JSON.stringify(authUsers));alert("User account created.");manageUsers();}
+function toggleUser(i){if(authUsers[i].username===currentUser.username)return alert("You cannot disable your own account.");authUsers[i].active=authUsers[i].active===false;localStorage.setItem("casinoUsers",JSON.stringify(authUsers));manageUsers();}
+function deleteUser(i){if(authUsers[i].username===currentUser.username)return alert("You cannot delete your own account.");if(!confirm("Delete this user account?"))return;authUsers.splice(i,1);localStorage.setItem("casinoUsers",JSON.stringify(authUsers));manageUsers();}
+
+let customers=JSON.parse(localStorage.getItem("customers")||"[]");
+let tx=JSON.parse(localStorage.getItem("tx")||"[]");
+
+// Repair duplicate/invalid customer IDs from earlier prototype builds.
+// This runs once on page load so old test data cannot cause the next customer to reuse CUS-000001.
+// The first customer keeps an existing ID; later duplicates receive the next unique ID.
+function repairCustomerIds(){
+  const used=new Set(), oldToNew=[];
+  let max=customers.reduce((m,x)=>Math.max(m,Number(String(x.id||"").replace(/\D/g,""))||0),0);
+  customers.forEach((c,i)=>{
+    let id=String(c.id||"").trim();
+    if(!/^CUS-\d{6}$/.test(id) || used.has(id)){
+      const old=id;
+      do { max++; id="CUS-"+String(max).padStart(6,"0"); } while(used.has(id));
+      c.id=id;
+      oldToNew.push({customer:c,old,newId:id});
+    }
+    used.add(id);
+  });
+  // Relink historical transactions when the transaction also stored the customer's name.
+  // Rewards and new Cashier transactions store customerName, so duplicate legacy IDs can be repaired safely.
+  oldToNew.forEach(m=>{
+    if(!m.old)return;
+    tx.forEach(x=>{
+      if(x.customerId!==m.old)return;
+      const sameName=String(x.customerName||"").trim().toLowerCase()===String(m.customer.name||"").trim().toLowerCase();
+      if(sameName) x.customerId=m.newId;
+    });
+  });
+  if(oldToNew.length){
+    localStorage.setItem("customers",JSON.stringify(customers));
+    localStorage.setItem("tx",JSON.stringify(tx));
+  }
+}
+repairCustomerIds();
+function repairLegacyBuyIns(){
+let changed=false, rates=getCurrencyRates();
+tx=tx.map(x=>{
+if(x.type==="BUY_IN"&&x.currency==="GHS"&&Number(x.amount)>0&&(!x.rate||Number(x.rate)<=1)&&Number(x.usd)===Number(x.amount)){
+let rate=Number(rates.USD);
+if(rate>0){x.rate=rate;x.usdRate=rate;x.usd=Number(x.amount)/rate;changed=true;}
+}
+return x;
+});
+if(changed)save();
+}
+function save(){localStorage.setItem("customers",JSON.stringify(customers));localStorage.setItem("tx",JSON.stringify(tx))}
+function businessDateForNow(){const d=new Date(); if(d.getHours()<18)d.setDate(d.getDate()-1); return d.toISOString().slice(0,10);}
+function closedBusinessDates(){try{return JSON.parse(localStorage.getItem('casinoClosedBusinessDates')||'{}')||{};}catch(e){return {};}}
+function isBusinessDateClosed(date){return !!closedBusinessDates()[String(date||'').slice(0,10)];}
+function markBusinessDateClosed(date,by){const s=closedBusinessDates();s[String(date||'').slice(0,10)]={closedAt:new Date().toISOString(),closedBy:by||currentUser?.name||currentUser?.username||''};localStorage.setItem('casinoClosedBusinessDates',JSON.stringify(s));}
+function dayEndPending(date){const d=String(date||'').slice(0,10), out=[];
+ const loans=tx.filter(x=>x.type==='LOAN'&&x.action==='LOAN_APPROVED'&&x.status==='PENDING_CASHIER'&&txBusinessDate(x)===d); if(loans.length)out.push(`${loans.length} CREDIT approval${loans.length===1?'':'s'} awaiting Cashier`);
+ const reps=tx.filter(x=>x.type==='LOAN'&&x.action==='LOAN_REPAYMENT_PENDING'&&x.status==='PENDING_CASHIER'&&txBusinessDate(x)===d); if(reps.length)out.push(`${reps.length} DEPOSIT receipt${reps.length===1?'':'s'} awaiting Cashier`);
+ const rew=tx.filter(x=>x.type==='REWARD'&&x.status==='PENDING_CASHIER'&&txBusinessDate(x)===d); if(rew.length)out.push(`${rew.length} reward payment${rew.length===1?'':'s'} awaiting Cashier`);
+ const ops=tableOps().filter(x=>x.businessDate===d&&tableOpStatus(x)==='PENDING'); if(ops.length)out.push(`${ops.length} Table Fill/Credit confirmation${ops.length===1?'':'s'} awaiting Cashier`);
+ const tables=tableRecords(), openTables=TABLE_ORDER.filter(code=>{const rec=tables.find(x=>x.businessDate===d&&x.tableCode===code);return !!rec?.openedAt && rec.status!=='CLOSED' && !rec?.closedAt;});
+ if(openTables.length)out.push(`Table closing not completed: ${openTables.map(code=>`${code} — ${TABLE_CONFIG[code]?.name||code}`).join(', ')}`);
+ return out;
+}
+function guardBusinessDateOpen(date){const d=String(date||businessDateForNow()).slice(0,10);if(isBusinessDateClosed(d)&&!balanceIsManager())return false;return true;}
+function initEnterToNextField(){if(window._enterNavInstalled)return;window._enterNavInstalled=true;document.addEventListener('keydown',function(e){if(e.key!=='Enter'||e.defaultPrevented)return;const t=e.target;if(!t||['INPUT','SELECT'].indexOf(t.tagName)<0||t.disabled||t.readOnly)return;if(t.closest('.modal'))return;e.preventDefault();const fields=[...document.querySelectorAll('input:not([type="hidden"]):not([disabled]):not([readonly]),select:not([disabled])')].filter(x=>x.offsetParent!==null);const i=fields.indexOf(t);if(i<0)return;const next=fields[i+1];if(next){next.focus();if(next.select&&next.tagName==='INPUT'&&next.type!=='date'&&next.type!=='datetime-local')next.select();}});}
+function applyClosedBusinessDayUI(){const date=businessDateForNow();if(!isBusinessDateClosed(date)||balanceIsManager())return;const root=document.getElementById('content');if(!root)return;root.querySelectorAll('input,select,textarea').forEach(e=>{if(e.id==='balanceBizDate'||e.id==='tableBizDate'||e.id==='cwStart'||e.id==='cwEnd')return;e.disabled=true;});root.querySelectorAll('button').forEach(b=>{const oc=b.getAttribute('onclick')||'';if(/addTx\(|approveLoan\(|markLoanPaid\(|collectLoanRepayment\(|receiveLoanRepayment\(|approveReward\(|payReward\(|addTableOperation\(|saveTableOpening\(|saveTableClosing\(|saveBalanceOpening\(|saveBalanceClosing\(/.test(oc))b.disabled=true;});}
+function nav(){
+ initEnterToNextField();
+ initLiveBalanceRefresh();
+ initClosedDayObserver();
+ const n=document.getElementById("nav");
+ const items=["dashboard","customers","cashier","loans","rewards","reports","customerwise","balance","tableopening","totaltable","tablefillcredit","settings"].filter(p=>hasPermission(p));
+ n.innerHTML=items.map(p=>`<a href="#${p}" data-page="${p}">${labels[p]}</a>`).join("");
+ n.querySelectorAll('a[data-page]').forEach(a=>a.addEventListener('click',function(ev){const p=this.dataset.page;ev.preventDefault();if(!requirePermission(p))return;show(p);}));
+ updateLoggedIn();
+}
+function cashierBar(active){
+return `<div class="panel" style="padding:12px 16px;margin-bottom:12px"><b>Cashier</b><div class="actions" style="display:inline-flex;margin-left:18px;gap:8px"><button class="btn ${active==="buy"?"primary":"muted"}" onclick="showCashierTab('buy')">Buy-In</button><button class="btn ${active==="out"?"primary":"muted"}" onclick="showCashierTab('out')">Cashout</button></div></div>`;
+}
+function openReports(e){
+ if(e)e.preventDefault();
+ if(!hasPermission("reports")) return false;
+ show("reports");
+ return false;
+}
+function sendReportsFrameData(frame){
+ if(!frame||!frame.contentWindow)return;
+ const payload={type:"CASINO_MASTER_REPORT_DATA",customers,tx,users:authUsers,currentUser};
+ const send=()=>{try{frame.contentWindow.postMessage(payload,"*");}catch(err){}};
+ // Send repeatedly and also respond to the report frame's ready handshake.
+ send(); setTimeout(send,100); setTimeout(send,500); setTimeout(send,1000); setTimeout(send,2000);
+}
+window.addEventListener("message",function(e){
+ if(e&&e.data&&e.data.type==="CASINO_MASTER_REPORT_READY"){
+   const f=document.getElementById("reportsFrame");
+   if(f) sendReportsFrameData(f);
+ }
+});
+
+
+function showCashierTab(tab){
+let b=document.getElementById("cashierBuyTab"),o=document.getElementById("cashierOutTab");
+if(b)b.className=tab==="buy"?"btn primary":"btn muted";
+if(o)o.className=tab==="out"?"btn primary":"btn muted";
+let area=document.getElementById("cashierWorkArea");
+if(!area){show(tab==="buy"?"cashdesk":"inout",true);return;}
+let host=document.createElement("div");
+host.id="cashierTabRenderHost";
+document.body.appendChild(host);
+let realContent=document.getElementById("content");
+let oldContent=realContent;
+realContent.id="contentOriginal";
+host.id="content";
+show(tab==="buy"?"cashdesk":"inout",true);
+let rendered=document.getElementById("content");
+if(rendered){
+  rendered.id="cashierTabRendered";
+  area.innerHTML="";
+  while(rendered.firstChild) area.appendChild(rendered.firstChild);
+  rendered.remove();
+}
+host.remove();
+oldContent.id="content";
+renderCashierPendingLoans();
+}
+function showCashier(){
+let c=document.getElementById("content");
+c.innerHTML=`<div class="panel"><h2>Cashier — Buy-In / Cashout</h2>
+<div class="small">All Cashier money actions are handled here: Buy-In, Cashout, CREDIT, DEPOSIT, and Rewards Pay / Give.</div>
+<div class="actions" style="margin-top:14px">
+<button id="cashierBuyTab" class="btn primary" onclick="showCashierTab('buy')">Buy-In</button>
+<button id="cashierOutTab" class="btn muted" onclick="showCashierTab('out')">Cashout</button>
+</div></div>
+<div id="cashierWorkArea"></div>
+<div id="cashierPendingLoans"></div>`;
+showCashierTab("buy");
+renderCashierPendingLoans();
+}
+function cashierLoanHistory(){
+let currentDate=currentCashierHistoryDate();let rows=tx.filter(x=>x.type==="LOAN"&&x.action==="LOAN_PAID"&&txBusinessDate(x)===currentDate).slice().reverse();
+if(!rows.length)return '<div class="small">No loan cash releases recorded yet.</div>';
+return `<table><tr><th>Date / Time</th><th>Customer</th><th>Amount</th><th>Status</th><th>Paid / Given By</th><th>Reference</th></tr>${rows.map(x=>{
+let c=customers.find(q=>q.id===x.customerId)||{};
+return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td><b>USD ${Number(x.amount||0).toFixed(2)}</b></td><td><span class="pill">PAID / GIVEN</span></td><td>${x.staff||"Cashier"}</td><td>${x.reference||""}</td></tr>`;
+}).join('')}</table>`;
+}
+function cashierRepaymentHistory(){
+let currentDate=currentCashierHistoryDate();let rows=tx.filter(x=>x.type==="LOAN"&&x.action==="LOAN_REPAID"&&txBusinessDate(x)===currentDate).slice().reverse();
+if(!rows.length)return '<div class="small">No loan repayments received yet.</div>';
+return `<table><tr><th>Date / Time</th><th>Customer</th><th>Amount Received</th><th>Status</th><th>Received By</th><th>Collected By</th><th>Reference</th></tr>${rows.map(x=>{
+let c=customers.find(q=>q.id===x.customerId)||{};
+return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td><b>USD ${Number(x.amount||0).toFixed(2)}</b></td><td><span class="pill">RECEIVED</span></td><td>${x.staff||"Cashier"}</td><td>${x.collectedBy||"Pit Manager"}</td><td>${x.reference||""}</td></tr>`;
+}).join('')}</table>`;
+}
+function pendingRepayments(){
+ const currentDate=currentCashierHistoryDate();
+ return tx.filter(x=>x.type==="LOAN"&&x.action==="LOAN_REPAYMENT_PENDING"&&x.status==="PENDING_CASHIER"&&txBusinessDate(x)===currentDate);
+}
+function pendingRepaymentTable(cashier=false){
+let rows=pendingRepayments();
+if(!rows.length)return '<div class="small">No loan repayments are waiting for Cashier receipt.</div>';
+return `<table><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Status</th><th>Collected By</th><th>Reference</th>${cashier?'<th>Cashier Action</th>':''}</tr>${rows.map(x=>{
+let c=customers.find(q=>q.id===x.customerId)||{};
+return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td><b>USD ${Number(x.amount||0).toFixed(2)}</b></td><td><span class="pill">Pending Cashier</span></td><td>${x.collectedBy||"Pit Manager"}</td><td>${x.reference||""}</td>${cashier?`<td><button class="btn success" type="button" onclick="receiveLoanRepayment('${x.id}')">Receive</button></td>`:''}</tr>`;
+}).join('')}</table>`;
+}
+function renderCashierPendingLoans(){
+let e=document.getElementById("cashierPendingLoans");
+if(!e)return;
+const isCashier=currentUser?.role==="Cashier"||currentUser?.role==="Manager";
+const rewardRowsPending=rewardRows("PENDING_CASHIER");
+e.innerHTML=`<div class="panel"><h2>Approved Loans — Cashier Action Required</h2>
+<div class="small">Only loans approved by the Pit Manager appear here. Click <b>Paid / Given</b> only after the cash has actually been released to the customer.</div>
+<div style="margin-top:14px">${pendingLoanTable(isCashier)}</div></div>
+<div class="panel"><h2>Loan Repayments — Cashier Action Required</h2>
+<div class="small">Pit Manager collects the repayment first. Cashier clicks <b>Receive</b> only after the money is physically received by Cashier.</div>
+<div style="margin-top:14px">${pendingRepaymentTable(isCashier)}</div></div>
+<div class="panel"><h2>Other Cashier Payments — Rewards</h2>
+<div class="small">Only rewards approved by the Pit Manager appear here. Cashier clicks <b>Pay / Give</b> after the physical payment or Lucky Chips have been given.</div>
+<div style="margin-top:14px">${pendingRewardTable()}</div></div>
+<div class="panel"><h2>Cashier Loan Release History</h2>
+<div class="small">Every loan cash release remains visible here after the Cashier clicks <b>Paid / Given</b>.</div>
+<div style="margin-top:14px">${cashierLoanHistory()}</div></div>
+<div class="panel"><h2>Cashier Loan Repayment Receipt History</h2>
+<div class="small">Every repayment received by Cashier remains visible here.</div>
+<div style="margin-top:14px">${cashierRepaymentHistory()}</div></div>`;
+}
+
+function renderTableFillCreditRecord(selectedDate){
+  if(userRole()!=="Cashier"){document.getElementById("content").innerHTML='<div class="panel"><h2>Table Fill / Credit Record</h2><div class="small">This working screen is available to the Cashier account only.</div></div>';return;}
+  const c=document.getElementById("content"),date=(selectedDate||document.getElementById('tableFillCreditDate')?.value||tableBusinessDate()).slice(0,10);
+  const pending=tablePendingOps(date),all=tableOps().filter(x=>x.businessDate===date).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const rows=pending.map((x,i)=>{const isFill=x.type==='FILL';return `<tr><td>${i+1}</td><td>${new Date(x.date).toLocaleString()}</td><td><b>${x.tableName||x.tableCode}</b><br><span class="small">${x.tableCode}</span></td><td>${isFill?'TABLE FILL — GIVEN':'TABLE CREDIT — RECEIVED'}</td><td><b>${x.currency} ${tableMoney(x.amount)}</b></td><td>${tableEsc(x.recordedBy||'')}</td><td><span class="pill">PENDING</span></td><td><button class="btn success" type="button" onclick="confirmTableFillCredit('${x.id}')">${isFill?'FILL — GIVEN':'CREDIT — RECEIVED'}</button></td></tr>`}).join('');
+  const history=all.filter(x=>tableOpStatus(x)==='COMPLETED').map((x,i)=>`<tr><td>${i+1}</td><td>${new Date(x.date).toLocaleString()}</td><td><b>${x.tableName||x.tableCode}</b><br><span class="small">${x.tableCode}</span></td><td>${x.type==='FILL'?'TABLE FILL — GIVEN':'TABLE CREDIT — RECEIVED'}</td><td><b>${x.currency} ${tableMoney(x.amount)}</b></td><td>${tableEsc(x.recordedBy||'')}</td><td><span class="pill">COMPLETED</span></td><td>${tableEsc(x.confirmedBy||'')}</td></tr>`).join('');
+  c.innerHTML=`<div class="panel"><div class="report-head"><div><h2>TABLE FILL / CREDIT RECORD</h2><div class="small">Cashier confirmation screen. Pit Manager records the transaction in Table Opening / Closing; Cashier confirms the physical Fill or Credit here.</div></div><div class="actions report-no-print"><label style="display:flex;align-items:center;gap:7px;font-weight:700">Business Date <input id="tableFillCreditDate" type="date" value="${date}" onchange="renderTableFillCreditRecord(this.value)"></label></div></div><div class="calcbox" style="margin-top:14px"><b>CONTROL:</b> Pending Table Fill / Credit transactions must be confirmed by Cashier before the table can be closed.</div></div>
+  <div class="panel" style="margin-top:14px"><div class="report-head"><div><h3 style="margin:0">Pending Cashier Actions</h3><div class="small">Click the button only after the physical chips/cash movement has actually occurred.</div></div><div class="pill">${pending.length} pending</div></div><div style="overflow:auto;margin-top:12px">${rows?`<table><tr><th>#</th><th>Date / Time</th><th>Table</th><th>Action</th><th>Amount</th><th>Recorded By</th><th>Status</th><th>Cashier Action</th></tr>${rows}</table>`:'<div class="small">No pending Table Fill / Table Credit transactions for this business date.</div>'}</div></div>
+  <div class="panel" style="margin-top:14px"><h3 style="margin:0">Completed History</h3><div style="overflow:auto;margin-top:12px">${history?`<table><tr><th>#</th><th>Date / Time</th><th>Table</th><th>Action</th><th>Amount</th><th>Recorded By</th><th>Status</th><th>Confirmed By</th></tr>${history}</table>`:'<div class="small">No completed Table Fill / Table Credit transactions for this business date.</div>'}</div></div>`;
+}
+function confirmTableFillCredit(id){if(isBusinessDateClosed(businessDateForNow())&&!balanceIsManager())return alert('This Business Date is closed. Only Manager can make corrections.');
+  if(userRole()!=="Cashier")return alert('Only the Cashier account can confirm Table Fill / Table Credit.');
+  const a=tableOps(),x=a.find(o=>o.id===id);if(!x)return alert('Transaction not found.');
+  if(tableOpStatus(x)!=='PENDING')return alert('This transaction has already been completed.');
+  const rec=tableRecords().find(r=>r.businessDate===x.businessDate&&r.tableCode===x.tableCode);
+  if(!rec?.openedAt||rec?.closedAt)return alert('The table must be open and not closed before this transaction can be confirmed.');
+  x.status='COMPLETED';x.confirmedBy=currentUser?.name||currentUser?.username||'Cashier';x.confirmedByRole=currentUser?.role||'Cashier';x.confirmedAt=new Date().toISOString();saveTableOps(a);renderTableFillCreditRecord(x.businessDate);
+}
+
+function reportBusinessDate(x){
+  if(x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.businessDate||''))) return String(x.businessDate);
+  const d=new Date(x?.date||x?.timestamp||x?.createdAt||''); if(Number.isNaN(d.getTime()))return '';
+  if(d.getHours()<18)d.setDate(d.getDate()-1);
+  return d.toISOString().slice(0,10);
+}
+function reportMoney(v){return '$'+Number(v||0).toFixed(2)}
+function reportEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function reportRowsFor(date){return tx.filter(x=>reportBusinessDate(x)===date)}
+function reportLatestDate(){return businessDateForNow()}
+function printReportBlock(id,title){const node=document.getElementById(id);if(!node)return;const clone=node.cloneNode(true);clone.querySelectorAll('.report-extra-row').forEach(r=>{r.style.display='table-row';r.classList.remove('report-extra-row')});clone.querySelectorAll('.report-no-print').forEach(e=>e.remove());const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>'+reportEsc(title)+'</title><style>body{font-family:Arial,sans-serif;color:#18232c;margin:20px}.casino-print-header{font-size:24px;font-weight:800;text-align:center;margin:0 0 12px}h1{font-size:20px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}th{background:#f4f6f8}.report-summary{display:flex;gap:10px}.report-box{border:1px solid #ddd;padding:8px}.report-box b{display:block;font-size:16px;margin-top:3px} .table-card{border-top:4px solid #263642}.table-scroll{overflow-x:auto;margin-top:16px}.table-scroll table{min-width:760px}.table-close-pcs{width:90px}.table-card .card{min-width:150px}</style></head><body><div class="casino-print-header">86 CASINO</div><h1>'+reportEsc(title)+'</h1>'+clone.innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),150)}
+function downloadReportBlock(id,title){const node=document.getElementById(id);if(!node)return;const rows=[...node.querySelectorAll('tr')];const csv=rows.map(tr=>[...tr.children].map(td=>'"'+String(td.innerText||'').replace(/"/g,'""').replace(/\n/g,' ')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=title.replace(/[^A-Za-z0-9_-]+/g,'_')+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+function renderMainReports(selectedDate){
+ const c=document.getElementById('content');
+ const existing=document.getElementById('mainReportDate');
+ const date=(selectedDate||existing?.value||reportLatestDate());
+ c.innerHTML=`<div class="panel"><div class="report-head"><div><h2 style="margin:0">Daily Printable Reports</h2><div class="small">Casino business day: 6:00 PM to 6:00 AM</div></div><div class="actions report-no-print" style="margin-top:0"><input id="mainReportDate" type="date" value="${date}" style="width:auto"><button class="btn primary" type="button" onclick="renderMainReports(document.getElementById('mainReportDate').value)">Refresh</button></div></div></div><div id="mainReportsGrid" class="report-grid"></div>`;
+ const d=document.getElementById('mainReportDate'); if(d)d.addEventListener('change',()=>renderMainReports(d.value));
+ const rows=reportRowsFor(date); const grid=document.getElementById('mainReportsGrid');
+ const section=(id,title,html,hasRows)=>{grid.insertAdjacentHTML('beforeend',`<div class="report-section" id="${id}"><div class="report-head"><div><h2>${title}</h2><div class="small">Business Date: ${date.split('-').reverse().join('/')}</div></div><div class="report-actions report-no-print"><button class="btn" onclick="printReportBlock('${id}','${title.replace(/'/g,"\\'")}')">Print</button><button class="btn" onclick="downloadReportBlock('${id}','${title}')">Download File</button></div></div>${html}${hasRows?`<div class="report-no-print" style="margin-top:10px"><button class="btn" type="button" onclick="toggleReportRows('${id}',this)">View Full Report</button></div>`:''}</div>`)};
+ const rowClass=(i)=>i<5?'':' class="report-extra-row" style="display:none"';
+ const latestTime=(rs)=>rs.reduce((m,x)=>Math.max(m, new Date(x.date||0).getTime()),0);
+ // Customer In & Out: default to latest 5 active customers; totals always include ALL activity.
+ const customersActive=customers.map(c=>{const rs=rows.filter(x=>x.customerId===c.id);const bi=rs.filter(x=>x.type==='BUY_IN').reduce((s,x)=>s+Number(x.usd||0),0);const co=rs.filter(x=>x.type==='CASH_OUT').reduce((s,x)=>s+Number(x.usd||0),0);const lg=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.action==='LOAN_GIVEN'||x.status==='PAID_GIVEN')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);const lr=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);return {c,bi,co,lg,lr,tin:bi+lg,tout:co+lr,last:latestTime(rs)}}).filter(x=>x.tin||x.tout).sort((a,b)=>b.last-a.last);
+ const tin=customersActive.reduce((s,x)=>s+x.tin,0),tout=customersActive.reduce((s,x)=>s+x.tout,0);
+ let h=`<div class="report-summary"><div class="report-box">Customers with Activity<b>${customersActive.length}</b></div><div class="report-box">TOTAL IN<b>${reportMoney(tin)}</b></div><div class="report-box">TOTAL OUT<b>${reportMoney(tout)}</b></div><div class="report-box">GRAND RESULT (IN − OUT)<b>${reportMoney(tin-tout)}</b></div></div>`;
+ h+=customersActive.length?`<div style="overflow:auto"><table><tr><th>Customer</th><th>Buy-In</th><th>CREDIT</th><th>TOTAL IN</th><th>Cash-Out</th><th>DEPOSIT</th><th>TOTAL OUT</th><th>RESULT (OUT − IN)</th></tr>${customersActive.map((x,i)=>`<tr${rowClass(i)}><td><b>${reportEsc(x.c.name)}</b> (${reportEsc(x.c.id)})</td><td>${reportMoney(x.bi)}</td><td>${reportMoney(x.lg)}</td><td><b>${reportMoney(x.tin)}</b></td><td>${reportMoney(x.co)}</td><td>${reportMoney(x.lr)}</td><td><b>${reportMoney(x.tout)}</b></td><td><b>${reportMoney(x.tout-x.tin)}</b></td></tr>`).join('')}</table></div>`:`<div class="report-empty">No customer In & Out transactions recorded on this business date.</div>`;
+ section('customerInOutMain','Daily Customer In & Out',h,customersActive.length>5);
+ // Loan reports: totals always include ALL transactions; screen defaults to latest 5.
+ const loanGiven=rows.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.action==='LOAN_GIVEN'||x.status==='PAID_GIVEN')).sort((a,b)=>new Date(b.date)-new Date(a.date)); const loanRep=rows.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED')).sort((a,b)=>new Date(b.date)-new Date(a.date));
+ const loanTable=(arr,repay)=>arr.length?`<div class="report-summary"><div class="report-box">Total<b>${reportMoney(arr.reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0))}</b></div><div class="report-box">Transactions<b>${arr.length}</b></div></div><div style="overflow:auto"><table><tr><th>#</th><th>Customer</th><th>Amount</th><th>Approved/Collected By</th><th>Paid/Received By</th><th>Reference / Note</th><th>Date / Time</th></tr>${arr.map((x,i)=>`<tr${rowClass(i)}><td>${i+1}</td><td>${reportEsc(customers.find(c=>c.id===x.customerId)?.name||x.customerName||x.customerId)}</td><td>${reportMoney(x.usd!=null?x.usd:x.amount)}</td><td>${reportEsc(x.approvedBy||x.collectedBy||'')}</td><td>${reportEsc(x.paidBy||x.receivedBy||x.staff||'')}</td><td>${reportEsc(x.reference||'')}</td><td>${new Date(x.date).toLocaleString()}</td></tr>`).join('')}</table></div>`:`<div class="report-empty">No loan ${repay?'received back':'paid / given'} on this business date.</div>`;
+ section('loanGivenMain','Daily CREDIT',loanTable(loanGiven,false),loanGiven.length>5); section('loanRepayMain','Daily DEPOSIT',loanTable(loanRep,true),loanRep.length>5);
+ // Rewards: latest 5 by transaction; totals/counts always include ALL.
+ const rewards=rows.filter(x=>x.type==='REWARD'&&x.status==='PAID_GIVEN').sort((a,b)=>new Date(b.date)-new Date(a.date));
+ function rewardSec(type,title,unit){const arr=rewards.filter(x=>x.rewardType===type);return `<div class="report-summary"><div class="report-box">${title}<b>${unit} ${arr.reduce((s,x)=>s+Number(x.amount||0),0).toFixed(2)}</b></div><div class="report-box">Paid / Given<b>${arr.length}</b></div></div>`+(arr.length?`<div style="overflow:auto"><table><tr><th>#</th><th>Customer</th><th>Amount</th><th>Approved By</th><th>Paid / Given By</th><th>Date / Time</th></tr>${arr.map((x,i)=>`<tr${rowClass(i)}><td>${i+1}</td><td>${reportEsc(customers.find(c=>c.id===x.customerId)?.name||x.customerName||x.customerId)}</td><td>${unit} ${Number(x.amount||0).toFixed(2)}</td><td>${reportEsc(x.approvedBy||'')}</td><td>${reportEsc(x.paidBy||x.staff||'')}</td><td>${new Date(x.date).toLocaleString()}</td></tr>`).join('')}</table></div>`:`<div class="report-empty">No ${title.toLowerCase()} paid / given on this business date.</div>`)}
+ section('cashbackMain','Daily Cashback Report',rewardSec('CASHBACK','Cashback','USD'),rewards.filter(x=>x.rewardType==='CASHBACK').length>5); section('drawMain','Daily Draw / Raffle Report',rewardSec('DAILY_DRAW','Daily Draw / Raffle','USD'),rewards.filter(x=>x.rewardType==='DAILY_DRAW').length>5); section('chipsMain','Daily Lucky Chips Report',rewardSec('LUCKY_CHIPS','Lucky Chips','GHS'),rewards.filter(x=>x.rewardType==='LUCKY_CHIPS').length>5);
+ // Collection reports: latest 5 transactions; totals always include ALL.
+ const isMomo=x=>/momo/i.test(String(x.method||'')); const isCard=x=>/card|zenith|bank/i.test(String(x.method||''));
+ const collection=(arr,title)=>{arr=arr.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));const total=arr.reduce((s,x)=>s+Number(x.usd||0),0);return `<div class="report-summary"><div class="report-box">Total<b>${reportMoney(total)}</b></div><div class="report-box">Transactions<b>${arr.length}</b></div></div>`+(arr.length?`<div style="overflow:auto"><table><tr><th>#</th><th>Customer</th><th>Amount</th><th>Method</th><th>Staff</th><th>Date / Time</th></tr>${arr.map((x,i)=>`<tr${rowClass(i)}><td>${i+1}</td><td>${reportEsc(x.customerName||customers.find(c=>c.id===x.customerId)?.name||x.customerId)}</td><td>${reportMoney(x.usd)}</td><td>${reportEsc(x.method||'')}</td><td>${reportEsc(x.staff||'')}</td><td>${new Date(x.date).toLocaleString()}</td></tr>`).join('')}</table></div>`:`<div class="report-empty">No ${title.toLowerCase()} transactions on this business date.</div>`) };
+ const momoRows=rows.filter(x=>x.type==='BUY_IN'&&isMomo(x)); const cardRows=rows.filter(x=>x.type==='BUY_IN'&&isCard(x));
+ section('momoMain','Daily MoMo Collection',collection(momoRows,'MoMo collection'),momoRows.length>5); section('cardMain','Daily Card / Zenith Collection',collection(cardRows,'Card / Zenith collection'),cardRows.length>5);
+}
+function toggleReportRows(id,btn){const root=document.getElementById(id);if(!root)return;const extras=root.querySelectorAll('.report-extra-row');const full=extras.length&&extras[0].style.display!=='none';extras.forEach(r=>r.style.display=full?'none':'table-row');if(btn)btn.textContent=full?'View Full Report':'Show Latest 5';}
+
+
+function customerWiseDateDefaults(){
+  const end=reportLatestDate();
+  const d=new Date(end+'T12:00:00');
+  d.setDate(d.getDate()-29);
+  return {start:d.toISOString().slice(0,10),end};
+}
+function customerWiseRows(cid,start,end){
+  return tx.filter(x=>x.customerId===cid).filter(x=>{const d=reportBusinessDate(x);return d>=start&&d<=end;});
+}
+function customerWiseData(cid,start,end){
+  const rs=customerWiseRows(cid,start,end);
+  const buy=rs.filter(x=>x.type==='BUY_IN').reduce((s,x)=>s+Number(x.usd||0),0);
+  const loanGiven=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.action==='LOAN_GIVEN'||x.status==='PAID_GIVEN')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);
+  const cashOut=rs.filter(x=>x.type==='CASH_OUT').reduce((s,x)=>s+Number(x.usd||0),0);
+  const loanRepaid=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);
+  return {buy,loanGiven,totalIn:buy+loanGiven,cashOut,loanRepaid,totalOut:cashOut+loanRepaid,result:(cashOut+loanRepaid)-(buy+loanGiven),rows:rs};
+}
+function customerWiseDailyRows(cid,start,end){
+  const map={};
+  for(let d=new Date(start+'T12:00:00');d<=new Date(end+'T12:00:00');d.setDate(d.getDate()+1)){
+    const key=d.toISOString().slice(0,10); map[key]={date:key,buy:0,loanGiven:0,cashOut:0,loanRepaid:0};
+  }
+  customerWiseRows(cid,start,end).forEach(x=>{
+    const d=reportBusinessDate(x); if(!map[d])return;
+    if(x.type==='BUY_IN')map[d].buy+=Number(x.usd||0);
+    else if(x.type==='CASH_OUT')map[d].cashOut+=Number(x.usd||0);
+    else if(x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.action==='LOAN_GIVEN'||x.status==='PAID_GIVEN'))map[d].loanGiven+=Number((x.usd!=null?x.usd:x.amount)||0);
+    else if(x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED'))map[d].loanRepaid+=Number((x.usd!=null?x.usd:x.amount)||0);
+  });
+  return Object.values(map).map(x=>({...x,totalIn:x.buy+x.loanGiven,totalOut:x.cashOut+x.loanRepaid,result:(x.cashOut+x.loanRepaid)-(x.buy+x.loanGiven)}));
+}
+function customerWiseMoney(v){return '$'+Number(v||0).toFixed(2)}
+function customerWiseDateLabel(d){return d.split('-').reverse().join('/')}
+function customerWiseReportHTML(){
+  if(currentUser?.role!=='Manager')return '<div class="panel"><div class="permission-note">Manager only. You do not have permission to access this report.</div></div>';
+  const sel=document.getElementById('cwCustomer'), startEl=document.getElementById('cwStart'), endEl=document.getElementById('cwEnd');
+  const cid=sel?.value||''; const start=startEl?.value||''; const end=endEl?.value||'';
+  const out=document.getElementById('cwResult'); if(!out)return;
+  if(!cid||!start||!end){out.innerHTML='<div class="report-empty">Select a customer and a valid start/end date.</div>';return;}
+  if(start>end){out.innerHTML='<div class="permission-note">Start date cannot be after end date.</div>';return;}
+  const c=customers.find(x=>x.id===cid); if(!c){out.innerHTML='<div class="report-empty">Customer not found.</div>';return;}
+  const d=customerWiseData(cid,start,end), daily=customerWiseDailyRows(cid,start,end);
+  out.innerHTML=`<div class="panel" id="cwPrintable"><div class="report-head"><div><h2 style="margin:0">Customer Wise Report</h2><div class="small">Customer: <b>${reportEsc(c.name)}</b> — ${reportEsc(c.id)}</div><div class="small">Period: ${customerWiseDateLabel(start)} – ${customerWiseDateLabel(end)} &nbsp; | &nbsp; Business day: 6:00 PM to 6:00 AM</div></div><div class="report-actions report-no-print"><button class="btn" type="button" onclick="printCustomerWiseReport()">Print Report</button><button class="btn" type="button" onclick="downloadCustomerWiseReport()">Download File</button></div></div>
+  <div class="report-summary"><div class="report-box">Buy-In<b>${customerWiseMoney(d.buy)}</b></div><div class="report-box">Loan Given<b>${customerWiseMoney(d.loanGiven)}</b></div><div class="report-box">TOTAL IN<b>${customerWiseMoney(d.totalIn)}</b></div><div class="report-box">Cash-Out<b>${customerWiseMoney(d.cashOut)}</b></div><div class="report-box">Loan Repaid<b>${customerWiseMoney(d.loanRepaid)}</b></div><div class="report-box">TOTAL OUT<b>${customerWiseMoney(d.totalOut)}</b></div><div class="report-box">RESULT (OUT − IN)<b>${customerWiseMoney(d.result)}</b></div></div>
+  <div style="overflow:auto;margin-top:12px"><table><tr><th>Customer</th><th>Buy-In</th><th>CREDIT</th><th>TOTAL IN</th><th>Cash-Out</th><th>DEPOSIT</th><th>TOTAL OUT</th><th>RESULT (OUT − IN)</th></tr><tr><td><b>${reportEsc(c.name)}</b> (${reportEsc(c.id)})</td><td>${customerWiseMoney(d.buy)}</td><td>${customerWiseMoney(d.loanGiven)}</td><td><b>${customerWiseMoney(d.totalIn)}</b></td><td>${customerWiseMoney(d.cashOut)}</td><td>${customerWiseMoney(d.loanRepaid)}</td><td><b>${customerWiseMoney(d.totalOut)}</b></td><td><b>${customerWiseMoney(d.result)}</b></td></tr></table></div>
+  <div class="panel" style="margin:18px 0 0;padding:16px"><h2 style="margin:0 0 12px">Date-Wise Detail</h2><div style="overflow:auto"><table><tr><th>Business Date</th><th>Buy-In</th><th>CREDIT</th><th>TOTAL IN</th><th>Cash-Out</th><th>DEPOSIT</th><th>TOTAL OUT</th><th>RESULT (OUT − IN)</th></tr>${daily.map(x=>`<tr><td>${customerWiseDateLabel(x.date)}</td><td>${customerWiseMoney(x.buy)}</td><td>${customerWiseMoney(x.loanGiven)}</td><td><b>${customerWiseMoney(x.totalIn)}</b></td><td>${customerWiseMoney(x.cashOut)}</td><td>${customerWiseMoney(x.loanRepaid)}</td><td><b>${customerWiseMoney(x.totalOut)}</b></td><td><b>${customerWiseMoney(x.result)}</b></td></tr>`).join('')}<tr><th>PERIOD TOTAL</th><th>${customerWiseMoney(d.buy)}</th><th>${customerWiseMoney(d.loanGiven)}</th><th>${customerWiseMoney(d.totalIn)}</th><th>${customerWiseMoney(d.cashOut)}</th><th>${customerWiseMoney(d.loanRepaid)}</th><th>${customerWiseMoney(d.totalOut)}</th><th>${customerWiseMoney(d.result)}</th></tr></table></div></div></div>`;
+}
+function renderCustomerWisePage(){
+  if(!requirePermission('customerwise'))return;
+  const c=document.getElementById('content'), def=customerWiseDateDefaults();
+  c.innerHTML=`<div class="panel"><div class="report-head"><div><h2 style="margin:0">Customer Wise Report</h2><div class="small">Manager access only. Select one customer and any business-date range to review the complete customer In & Out history.</div></div><span class="pill">MANAGER ONLY</span></div><div class="formgrid" style="margin-top:16px"><div class="field"><label>Customer *</label><select id="cwCustomer"><option value="">Select Customer</option>${customers.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(x=>`<option value="${x.id}">${reportEsc(x.name)} — ${reportEsc(x.id)}</option>`).join('')}</select></div><div class="field"><label>Start Business Date *</label><input id="cwStart" type="date" value="${def.start}"></div><div class="field"><label>End Business Date *</label><input id="cwEnd" type="date" value="${def.end}"></div></div><div class="actions"><button class="btn primary" type="button" onclick="customerWiseReportHTML()">View Report</button><button class="btn muted" type="button" onclick="clearCustomerWiseReport()">Clear</button></div></div><div id="cwResult"><div class="report-empty">Select a customer and click View Report.</div></div>`;
+}
+function clearCustomerWiseReport(){ const sel=document.getElementById('cwCustomer'); if(sel) sel.value=''; const r=document.getElementById('cwResult'); if(r) r.innerHTML='<div class="report-empty">Select a customer and click View Report.</div>'; }
+function printCustomerWiseReport(){
+  const node=document.getElementById('cwPrintable'); if(!node)return;
+  const clone=node.cloneNode(true); clone.querySelectorAll('.report-no-print').forEach(e=>e.remove());
+  const w=window.open('','_blank'); if(!w)return;
+  w.document.write(`<html><head><title>Customer Wise Report</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;color:#18232c;margin:0}h2{font-size:18px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{padding:6px;border:1px solid #ddd;text-align:left}th{background:#f4f6f8}.report-summary{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.report-box{border:1px solid #ddd;padding:8px;min-width:110px}.report-box b{display:block;font-size:15px;margin-top:3px}.small{font-size:10px;color:#687781}.panel{border:0;padding:0;margin:0 0 12px}</style></head><body>${clone.innerHTML}</body></html>`); w.document.close(); w.focus(); setTimeout(()=>w.print(),200);
+}
+function downloadCustomerWiseReport(){
+  const node=document.getElementById('cwPrintable'); if(!node)return;
+  const rows=[...node.querySelectorAll('table tr')]; const csv='\ufeff'+rows.map(tr=>[...tr.children].map(td=>'"'+String(td.innerText||'').replace(/"/g,'""').replace(/\n/g,' ')+'"').join(',')).join('\r\n');
+  const c=document.getElementById('cwCustomer'), name=c?.selectedOptions?.[0]?.textContent?.replace(/\s+—.*$/,'')||'Customer'; const start=document.getElementById('cwStart')?.value||''; const end=document.getElementById('cwEnd')?.value||'';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); a.download=`Customer_Wise_${name.replace(/[^A-Za-z0-9]+/g,'_')}_${start}_${end}.csv`; document.body.appendChild(a); a.click(); a.remove();
+}
+
+
+/* V1.75 ADD-ON: Table Opening / Closing. This is additive and does not alter V1.74 customer/transaction data. */
+const TABLE_CONFIG={
+ AR1:{name:"American Roulette-1",currency:"USD",denoms:[[5000,0],[1000,0],[500,40],[100,40],[50,80],[25,80],[10,100],[5,100],[1,0],[0.5,0]]},
+ AR2:{name:"American Roulette-2",currency:"USD",denoms:[[5000,0],[1000,0],[500,40],[100,40],[50,80],[25,80],[10,100],[5,100],[1,0],[0.5,0]]},
+ AR3:{name:"American Roulette-3",currency:"GHS",denoms:[[10000,20],[5000,20],[1000,40],[500,40],[100,80],[50,80],[25,80],[10,0],[5,0],[1,0],[0.5,0]]},
+ AR4:{name:"American Roulette-4",currency:"GHS",denoms:[[10000,20],[5000,20],[1000,40],[500,40],[100,80],[50,80],[25,80],[10,0],[5,0],[1,0],[0.5,0]]},
+ AR5:{name:"American Roulette-5",currency:"USD",denoms:[[5000,0],[1000,20],[500,40],[100,100],[50,80],[25,80],[10,40],[5,40],[1,0],[0.5,0]]},
+ AR6:{name:"American Roulette-6",currency:"GHS",denoms:[[25000,20],[10000,20],[5000,20],[1000,40],[500,40],[100,80],[50,0],[25,0],[10,0],[5,0],[1,0],[0.5,0]]},
+ BJ1:{name:"Black Jack",currency:"GHS",denoms:[[5000,0],[1000,0],[500,40],[100,80],[50,80],[25,80],[10,40],[5,40],[2.5,20],[1,0],[0.5,0]]},
+ PK1:{name:"Poker-1",currency:"GHS",denoms:[[5000,0],[1000,0],[500,20],[100,80],[50,80],[25,80],[10,40],[5,20],[2.5,20],[1,0],[0.5,0]]},
+ PK2:{name:"Poker-2",currency:"USD",denoms:[[5000,0],[1000,0],[500,0],[100,40],[50,0],[25,80],[10,80],[5,80],[1,40],[0.5,20]]},
+ PK3:{name:"Poker-3",currency:"GHS",denoms:[[5000,0],[1000,0],[500,20],[100,80],[50,80],[25,80],[10,40],[5,0],[1,0],[0.5,0]]},
+ PK4:{name:"Poker-4",currency:"USD",denoms:[[5000,0],[1000,0],[500,0],[100,40],[50,0],[25,80],[10,80],[5,80],[1,40],[0.5,20]]},
+ PK5:{name:"Poker-5",currency:"USD",denoms:[[5000,0],[1000,0],[500,0],[100,40],[50,0],[25,80],[10,80],[5,80],[1,40],[0.5,20]]},
+ PK6:{name:"Poker-6",currency:"USD",denoms:[[5000,0],[1000,0],[500,0],[100,40],[50,0],[25,80],[10,80],[5,80],[1,40],[0.5,20]]},
+ BACCA1:{name:"Baccarat-1",currency:"GHS",denoms:[[10000,20],[5000,20],[1000,40],[500,40],[100,80],[50,40],[25,0],[10,40],[5,0],[1,0],[0.5,0]]},
+ BACCA2:{name:"Baccarat-2",currency:"USD",denoms:[[5000,0],[1000,20],[500,20],[100,40],[50,0],[25,80],[10,80],[5,40],[1,20],[0.5,0]]}
+};
+const TABLE_ORDER=["PK1","PK2","PK3","PK4","PK5","PK6","AR1","AR2","AR3","AR4","AR5","AR6","BACCA1","BACCA2","BJ1"];
+const TABLE_OPENERS=["Cashier","Dealer","Inspector","Pit Manager"];
+function tableRecords(){return JSON.parse(localStorage.getItem("casinoTableOpeningClosing")||"[]");}
+function saveTableRecords(a){localStorage.setItem("casinoTableOpeningClosing",JSON.stringify(a));}
+function tableMoney(n){return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function tableBusinessDate(v){if(v)return v;return businessDateForNow();}
+function tableOpeningTotal(cfg){return cfg.denoms.reduce((s,d)=>s+Number(d[0])*Number(d[1]),0);}
+function tableUsdValue(currency,amount,rate){if(currency==="USD")return Number(amount||0);return Number(amount||0)/Number(rate||getManagerUsdRate()||1);}
+function tableCanEdit(){const r=userRole();return r==="Manager"||r==="Pit Manager";}
+function tableCloseKeydown(e,key,index){if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();return;}if(e.key==="Enter"){e.preventDefault();const el=[...document.querySelectorAll(`.table-close-pcs[data-table="${key}"]`)].find(x=>!x.disabled&&Number(x.dataset.index)>index);if(el){el.focus();el.select();}}}
+function tableRowInputs(key,rec){const cfg=TABLE_CONFIG[key]; const close=rec?.closing||[]; return cfg.denoms.map((d,i)=>`<tr><td>${d[0].toLocaleString()}</td><td>${d[1]}</td><td>${tableMoney(d[0]*d[1])}</td><td><input class="table-close-pcs" data-table="${key}" data-index="${i}" type="number" min="0" step="1" value="${close[i]??""}" ${(!rec?.openedAt||rec?.closedAt||!tableCanEdit())?"disabled":""} onkeydown="tableCloseKeydown(event,'${key}',${i})" oninput="updateTableCalc('${key}')"></td><td id="tv-${key}-${i}">${tableMoney(Number(d[0])*Number(close[i]||0))}</td><td id="td-${key}-${i}">${tableMoney(Number(close[i]||0)-Number(d[1]))}</td></tr>`).join("");}
+function tableOps(){try{const v=JSON.parse(localStorage.getItem("casinoTableOperations")||"[]");return Array.isArray(v)?v:[];}catch(e){return [];}}
+function saveTableOps(a){localStorage.setItem("casinoTableOperations",JSON.stringify(a));}
+// V1.95: preserve all existing table opening/closing and operation records. No cleanup/reset is performed.
+function tableOpStatus(x){return String(x?.status||'COMPLETED').toUpperCase();}
+function tableOpTotals(date,key){
+  const arr=tableOps().filter(x=>x.businessDate===date&&x.tableCode===key);
+  const completed=arr.filter(x=>tableOpStatus(x)==='COMPLETED');
+  return {fill:completed.filter(x=>x.type==='FILL').reduce((s,x)=>s+Number(x.amount||0),0),credit:completed.filter(x=>x.type==='CREDIT').reduce((s,x)=>s+Number(x.amount||0),0),rows:arr.sort((a,b)=>new Date(a.date)-new Date(b.date))};
+}
+function tablePendingOps(date,key){return tableOps().filter(x=>x.businessDate===date&&(!key||x.tableCode===key)&&tableOpStatus(x)==='PENDING');}
+function tableEsc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function tableLocalDateTime(iso){if(!iso)return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
+const TABLE_PEOPLE=['Cashier','Dealer','Inspector','Pit Manager'];
+function tablePeopleFields(prefix,rec,disabled){
+  const id=prefix==='opened'?'open':'close';
+  return `<div class="table-people" style="grid-column:1/-1"><div style="font-weight:700;margin-bottom:8px">${prefix==='opened'?'Opened by':'Closed by'} — all 4 names are mandatory</div><div class="formgrid">${TABLE_PEOPLE.map(role=>{const k=prefix+role.replace(/\s/g,'');const val=rec?.[k+'Name']||'';return `<div class="field"><label>${role} Name *</label><input id="tpn-${id}-${role.replace(/\s/g,'')}" value="${tableEsc(val)}" placeholder="Enter ${role} name" ${disabled?'disabled':''}></div>`}).join('')}</div></div>`;
+}
+function tablePersonValues(prefix){
+  const id=prefix==='opened'?'open':'close';
+  const out={}; TABLE_PEOPLE.forEach(role=>{const key=prefix+role.replace(/\s/g,'');out[key+'Name']=(document.getElementById(`tpn-${id}-${role.replace(/\s/g,'')}`)?.value||'').trim();}); return out;
+}
+function renderTableOpening(selectedDate){
+ const c=document.getElementById("content"),existing=document.getElementById("tableBizDate"),date=(selectedDate||existing?.value||tableBusinessDate()).slice(0,10),recs=tableRecords();
+ c.innerHTML=`<div class="panel"><div class="report-head"><div><h2>Table Opening / Closing</h2><div class="small">Business day: 6:00 PM – 6:00 AM. Select one table below to preview and work on it. Opening chip quantities are fixed from the supplied Casino Excel; closing PCS are entered manually.</div></div><div class="actions report-no-print"><input id="tableBizDate" type="date" value="${date}" onchange="renderTableOpening(String(this.value).slice(0,10))"></div></div><div class="calcbox" style="margin-top:14px"><b>Mandatory control:</b> Every table opening and closing requires the names of <b>Cashier, Dealer, Inspector and Pit Manager</b>. Table Fill and Table Credit are recorded <b>separately during operation</b> and automatically flow into the closing calculation. <b>Result = Closing Total − Opening Total − Table Fill + Table Credit</b>. USD Result is the main result; GHS tables also show the native Cedis Result.</div><div class="field" style="max-width:620px;margin-top:14px"><label>Select Table *</label><select id="tableSelector" onchange="previewSelectedTable()"><option value="">Select table to preview</option>${TABLE_ORDER.map(key=>`<option value="${key}">${key} — ${TABLE_CONFIG[key].name}</option>`).join('')}</select></div></div><div id="selectedTablePreview"></div>`;
+ const last=window._selectedTableKey&&TABLE_CONFIG[window._selectedTableKey]?window._selectedTableKey:''; if(last){document.getElementById('tableSelector').value=last;previewSelectedTable();}
+}
+function tableOperationPanel(key,date,rec){
+ const cfg=TABLE_CONFIG[key],ops=tableOpTotals(date,key),canRecord=!!rec?.openedAt&&!rec?.closedAt&&tableCanEdit();
+ const rows=ops.rows.map((x,i)=>`<tr><td>${i+1}</td><td>${new Date(x.date).toLocaleString()}</td><td><b>${x.type}</b></td><td>${cfg.currency} ${tableMoney(x.amount)}</td><td>${tableEsc(x.recordedBy||'')}</td></tr>`).join('');
+ return `<div class="panel" style="margin-top:16px"><div class="report-head"><div><h3 style="margin:0">Table Fill / Table Credit — Operation</h3><div class="small">Separate from closing. Multiple transactions can be recorded during the business day. These totals will automatically appear when the table is closed.</div></div><div class="pill">${ops.rows.length} transaction${ops.rows.length===1?'':'s'}</div></div><div class="formgrid" style="margin-top:12px"><div class="field"><label>Transaction Type *</label><select id="top-type-${key}" ${canRecord?'':'disabled'}><option value="FILL">Table Fill</option><option value="CREDIT">Table Credit</option></select></div><div class="field"><label>Amount (${cfg.currency}) *</label><input id="top-amount-${key}" type="number" min="0.01" step="0.01" placeholder="0.00" ${canRecord?'':'disabled'}></div><div class="field"><label>Recorded By *</label><input id="top-recorded-by-${key}" value="" placeholder="Type employee name" ${canRecord?"":"disabled"}></div><div class="field" style="display:flex;align-items:end"><button class="btn primary" type="button" onclick="addTableOperation('${key}')" ${canRecord?'':'disabled'}>Record Transaction</button></div></div>${rows?`<div style="overflow:auto;margin-top:12px"><table><tr><th>#</th><th>Date / Time</th><th>Type</th><th>Amount</th><th>Recorded By</th></tr>${rows}</table></div>`:`<div class="small" style="margin-top:12px">No Table Fill / Table Credit recorded for this table on this business date.</div>`}<div class="cardgrid" style="margin-top:12px"><div class="card"><div class="label">Total Table Fill</div><div class="value">${cfg.currency} ${tableMoney(ops.fill)}</div></div><div class="card"><div class="label">Total Table Credit</div><div class="value">${cfg.currency} ${tableMoney(ops.credit)}</div></div></div></div>`;
+}
+function addTableOperation(key){if(!tableCanEdit())return alert("Only Manager or Pit Manager can record Table Fill / Credit."); const date=document.getElementById('tableBizDate')?.value||businessDateForNow(); if(isBusinessDateClosed(date)&&!balanceIsManager())return alert("This Business Date is closed. Only Manager can make corrections.");
+ const rec=tableRecords().find(x=>x.businessDate===date&&x.tableCode===key); if(!rec?.openedAt||rec?.closedAt)return alert('The table must be opened and not yet closed to record Table Fill / Table Credit.');
+ const type=document.getElementById(`top-type-${key}`)?.value,amount=Number(document.getElementById(`top-amount-${key}`)?.value||0); const recordedBy=(document.getElementById(`top-recorded-by-${key}`)?.value||'').trim(); if(!type||amount<=0||!recordedBy)return alert('Select the transaction type, enter a valid amount, and type the employee name in Recorded By.');
+ const a=tableOps();a.push({id:'TOP-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),businessDate:date,tableCode:key,tableName:TABLE_CONFIG[key].name,currency:TABLE_CONFIG[key].currency,type,amount,recordedBy:(document.getElementById(`top-recorded-by-${key}`)?.value||'').trim(),recordedByRole:currentUser?.role||'',status:'PENDING',date:new Date().toISOString()});saveTableOps(a);previewSelectedTable();
+}
+function previewSelectedTable(){
+ const key=document.getElementById('tableSelector')?.value||''; window._selectedTableKey=key; const box=document.getElementById('selectedTablePreview'); if(!box)return;
+ if(!key){box.innerHTML=`<div class="panel"><div class="small">Select a table above. Only the selected table will be shown here.</div></div>`;return;}
+ const date=document.getElementById('tableBizDate')?.value||businessDateForNow(),rec=tableRecords().find(x=>x.businessDate===date&&x.tableCode===key); box.innerHTML=tableCardHtml(key,date,rec);
+}
+function tableCardHtml(key,date,rec){
+ const cfg=TABLE_CONFIG[key],openTotal=tableOpeningTotal(cfg),canEdit=tableCanEdit(),disabledOpen=!!rec?.openedAt||!canEdit,disabledClose=!rec?.openedAt||!!rec?.closedAt||!canEdit,ops=tableOpTotals(date,key);
+ return `<div class="panel table-card" id="table-${key}"><div class="report-head"><div><h2 style="margin:0">${cfg.name} <span class="pill">${key}</span></h2><div class="small">Currency: ${cfg.currency} &nbsp; | &nbsp; Opening Total: ${cfg.currency} ${tableMoney(openTotal)}${canEdit?"":" &nbsp; | &nbsp; <b>VIEW ONLY</b>"}</div></div><div class="actions report-no-print"><span class="pill">${rec?.closedAt?'CLOSED':rec?.openedAt?'OPENED':'NOT OPENED'}</span></div></div>
+ <div class="formgrid" style="margin-top:14px">${tablePeopleFields('opened',rec,disabledOpen)}
+ <div class="field"><label>Opening time</label><input id="tot-${key}" type="datetime-local" value="${tableLocalDateTime(rec?.openedAt)}" ${disabledOpen?'disabled':''}></div>
+ <div class="field"><label>Total Table Fill (${cfg.currency})</label><input id="tf-${key}" value="${tableMoney(ops.fill)}" disabled></div>
+ <div class="field"><label>Total Table Credit (${cfg.currency})</label><input id="tc-${key}" value="${tableMoney(ops.credit)}" disabled></div>
+ ${tablePeopleFields('closed',rec,disabledClose)}
+ <div class="field"><label>Closing time</label><input id="tct-${key}" type="datetime-local" value="${tableLocalDateTime(rec?.closedAt)}" ${disabledClose?'disabled':''}></div></div>
+ <div class="table-scroll"><table><tr><th colspan="3">OPENING — FIXED</th><th colspan="3">CLOSING — MANUAL</th></tr><tr><th>Denom</th><th>Opening PCS</th><th>Opening Value</th><th>Closing PCS</th><th>Closing Value</th><th>+ / − PCS</th></tr>${tableRowInputs(key,rec)}</table></div>
+ <div class="cardgrid" style="margin-top:14px"><div class="card"><div class="label">Opening Total</div><div class="value">${cfg.currency} ${tableMoney(openTotal)}</div></div><div class="card"><div class="label">Closing Total</div><div class="value" id="ct-${key}">${cfg.currency} ${tableMoney(rec?.closingTotal||0)}</div></div><div class="card"><div class="label">Table Fill</div><div class="value" id="tfv-${key}">${cfg.currency} ${tableMoney(ops.fill)}</div></div><div class="card"><div class="label">Table Credit</div><div class="value" id="tcv-${key}">${cfg.currency} ${tableMoney(ops.credit)}</div></div>${cfg.currency==='GHS'?`<div class="card"><div class="label">CEDIS RESULT</div><div class="value" id="trn-${key}">GHS ${tableMoney(rec?.resultNative||0)}</div></div>`:''}<div class="card"><div class="label">TABLE RESULT (USD)</div><div class="value" id="tr-${key}" style="font-weight:800">USD ${tableMoney(rec?.resultUsd||0)}</div></div></div>
+ ${tableOperationPanel(key,date,rec)}
+ <div class="actions report-no-print" style="margin-top:14px">${canEdit&&!rec?.openedAt?`<button class="btn primary" type="button" onclick="saveTableOpening('${key}')">Confirm Opening</button>`:''}${canEdit&&rec?.openedAt&&!rec?.closedAt?`<button class="btn success" type="button" onclick="saveTableClosing('${key}')">Confirm Closing</button>`:''}${rec?.closedAt?`<span class="small">Opening: Cashier — ${tableEsc(rec.openedCashierName||'')} &nbsp; | &nbsp; Dealer — ${tableEsc(rec.openedDealerName||'')} &nbsp; | &nbsp; Inspector — ${tableEsc(rec.openedInspectorName||'')} &nbsp; | &nbsp; Pit Manager — ${tableEsc(rec.openedPitManagerName||'')} &nbsp; at ${new Date(rec.openedAt).toLocaleString()}<br>Closing: Cashier — ${tableEsc(rec.closedCashierName||'')} &nbsp; | &nbsp; Dealer — ${tableEsc(rec.closedDealerName||'')} &nbsp; | &nbsp; Inspector — ${tableEsc(rec.closedInspectorName||'')} &nbsp; | &nbsp; Pit Manager — ${tableEsc(rec.closedPitManagerName||'')} &nbsp; at ${new Date(rec.closedAt).toLocaleString()}</span>`:''}<button class="btn muted" type="button" onclick="printTable('${key}','${date}')">Print ${cfg.name}</button></div></div>`;
+}
+function readClosePcs(key){return [...document.querySelectorAll(`.table-close-pcs[data-table="${key}"]`)].map(e=>Math.max(0,Number(e.value||0)));}
+function updateTableCalc(key){const cfg=TABLE_CONFIG[key],date=document.getElementById('tableBizDate')?.value||businessDateForNow(),pcs=readClosePcs(key),closing=cfg.denoms.reduce((s,d,i)=>s+Number(d[0])*pcs[i],0),ops=tableOpTotals(date,key),fill=ops.fill,credit=ops.credit,resultNative=closing-tableOpeningTotal(cfg)-fill+credit,usd=tableUsdValue(cfg.currency,resultNative);if(document.getElementById(`ct-${key}`))document.getElementById(`ct-${key}`).textContent=`${cfg.currency} ${tableMoney(closing)}`;if(document.getElementById(`tfv-${key}`))document.getElementById(`tfv-${key}`).textContent=`${cfg.currency} ${tableMoney(fill)}`;if(document.getElementById(`tcv-${key}`))document.getElementById(`tcv-${key}`).textContent=`${cfg.currency} ${tableMoney(credit)}`;if(document.getElementById(`trn-${key}`))document.getElementById(`trn-${key}`).textContent=`GHS ${tableMoney(resultNative)}`;if(document.getElementById(`tr-${key}`))document.getElementById(`tr-${key}`).textContent=`USD ${tableMoney(usd)}`;cfg.denoms.forEach((d,i)=>{const v=document.getElementById(`tv-${key}-${i}`),q=document.getElementById(`td-${key}-${i}`);if(v)v.textContent=tableMoney(Number(d[0])*pcs[i]);if(q)q.textContent=tableMoney(pcs[i]-Number(d[1]));});return {pcs,closing,fill,credit,resultNative,usd};}
+function saveTableOpening(key){if(!tableCanEdit())return alert("Only Manager or Pit Manager can edit Table Opening / Closing."); const date=document.getElementById('tableBizDate')?.value||businessDateForNow(); if(isBusinessDateClosed(date)&&!balanceIsManager())return alert("This Business Date is closed. Only Manager can make corrections.");
+ const people=tablePersonValues('opened'); if(TABLE_PEOPLE.some(r=>!people['opened'+r.replace(/\s/g,'')+'Name']))return alert('All 4 Opening names are mandatory: Cashier, Dealer, Inspector and Pit Manager.');
+ const a=tableRecords();if(a.some(x=>x.businessDate===date&&x.tableCode===key))return alert('This table already has an opening record for this business date.');const cfg=TABLE_CONFIG[key],inputTime=document.getElementById(`tot-${key}`)?.value,openedAt=inputTime?new Date(inputTime).toISOString():new Date().toISOString();a.push({id:'TBL-'+Date.now()+'-'+key,businessDate:date,tableCode:key,tableName:cfg.name,currency:cfg.currency,openingDenoms:cfg.denoms,openingTotal:tableOpeningTotal(cfg),...people,openedBy:'Cashier — '+people.openedCashierName+'; Dealer — '+people.openedDealerName+'; Inspector — '+people.openedInspectorName+'; Pit Manager — '+people.openedPitManagerName,openedAt,status:'OPEN'});saveTableRecords(a);previewSelectedTable();}
+function saveTableClosing(key){if(!tableCanEdit())return alert("Only Manager or Pit Manager can edit Table Opening / Closing."); const date=document.getElementById('tableBizDate')?.value||businessDateForNow(); if(isBusinessDateClosed(date)&&!balanceIsManager())return alert("This Business Date is closed. Only Manager can make corrections.");
+ const a=tableRecords(),rec=a.find(x=>x.businessDate===date&&x.tableCode===key);if(!rec)return alert('Confirm the table opening first.');const pending=tablePendingOps(date,key);if(pending.length)return alert('TABLE CANNOT BE CLOSED\n\nThere are '+pending.length+' pending Table Fill / Table Credit transaction(s).\nPlease have the Cashier confirm all outstanding transactions before closing the table.');const people=tablePersonValues('closed');if(TABLE_PEOPLE.some(r=>!people['closed'+r.replace(/\s/g,'')+'Name']))return alert('All 4 Closing names are mandatory: Cashier, Dealer, Inspector and Pit Manager.');const t=updateTableCalc(key),cfg=TABLE_CONFIG[key];rec.closing=t.pcs;rec.closingTotal=t.closing;rec.tableFill=t.fill;rec.tableCredit=t.credit;rec.resultNative=t.resultNative;rec.usdRate=cfg.currency==='USD'?1:getManagerUsdRate();rec.resultUsd=t.usd;Object.assign(rec,people);rec.closedBy='Cashier — '+people.closedCashierName+'; Dealer — '+people.closedDealerName+'; Inspector — '+people.closedInspectorName+'; Pit Manager — '+people.closedPitManagerName;const inputTime=document.getElementById(`tct-${key}`)?.value;rec.closedAt=inputTime?new Date(inputTime).toISOString():new Date().toISOString();rec.status='CLOSED';saveTableRecords(a);previewSelectedTable();}
+function totalTableClosedResults(date){
+  const recs=tableRecords().filter(r=>r.businessDate===date&&r.closedAt);
+  const map={}; recs.forEach(r=>{map[r.tableCode]=Number(r.resultUsd||0);}); return map;
+}
+function totalTableDeductions(){
+ const raw=JSON.parse(localStorage.getItem("casinoTableDeductions")||"{}");
+ Object.keys(raw).forEach(d=>{
+  if(Array.isArray(raw[d])) raw[d]=raw[d].map(r=>({name:String(r?.name||""),value:Number(r?.value||0),active:r?.active!==false,editing:r?.editing===true}));
+  else { const n=Number(raw[d]||0); raw[d]=n?[{name:"",value:n,active:true}]:[]; }
+ });
+ return raw;
+}
+function saveTotalTableDeductions(x){localStorage.setItem("casinoTableDeductions",JSON.stringify(x));}
+function totalTableNames(){return ["AR1","AR2","AR3","AR4","AR5","AR6","BJ1","PK1","PK2","PK3","PK4","PK5","PK6","BACCA1","BACCA2"];}
+function totalTableDisplayName(k){return {AR1:"AR1",AR2:"AR2",AR3:"AR3",AR4:"AR4",AR5:"AR5",AR6:"AR6",BJ1:"BJ 1",PK1:"POKER 1",PK2:"POKER 2",PK3:"POKER 3",PK4:"POKER 4",PK5:"POKER 5",PK6:"POKER 6",BACCA1:"BACCA 1",BACCA2:"BACCA 2"}[k]||k;}
+function totalTableDeductionRows(date){
+ const all=totalTableDeductions(),rows=Array.isArray(all[date])?all[date]:[];
+ return rows.slice(0,10);
+}
+function totalTableDeductionTotal(date){return totalTableDeductionRows(date).reduce((s,r)=>s+Number(r.value||0),0);}
+function renderTotalTableSummary(selectedDate){
+ const c=document.getElementById("content");
+ const date=(selectedDate||document.getElementById('totalBizDate')?.value||tableBusinessDate()).slice(0,10);
+ const results=totalTableClosedResults(date),dedRows=totalTableDeductionRows(date);
+ const ded=dedRows.reduce((s,r)=>s+Number(r.value||0),0);
+ const total=totalTableNames().reduce((s,k)=>s+Number(results[k]||0),0);
+ const win=totalTableNames().reduce((s,k)=>s+(Number(results[k]||0)>0?Number(results[k]):0),0);
+ const loss=totalTableNames().reduce((s,k)=>s+(Number(results[k]||0)<0?Number(results[k]):0),0);
+ const canDed=canManageTableSummary();
+ const visibleRows=dedRows.filter(r=>r.active!==false&&(String(r.name||'').trim()!==''||Number(r.value||0)>0||r.editing));
+ const deductionRows=visibleRows.map((r,i)=>`<tr><td>${i+1}</td><td><input id="dedName-${i}" value="${tableEsc(r.name)}" placeholder="Description" ${canDed?'':'disabled'} oninput="updateTotalTableDeductions()"></td><td><input id="dedValue-${i}" type="number" min="0" step="0.01" value="${r.value||''}" placeholder="0.00" ${canDed?'':'disabled'} oninput="updateTotalTableDeductions()" style="width:100%;text-align:right"></td></tr>`).join('');
+ const canAddDeduction=canDed || String(currentUser?.username||'').trim().toLowerCase()==='manager' || ['manager','pit manager','pitmanager'].includes(String(currentUser?.role||'').trim().toLowerCase().replace(/\s+/g,' '));
+ const meaningfulDeductionCount=dedRows.filter(r=>r.active!==false && (String(r.name||'').trim()!=='' || Number(r.value||0)>0)).length;
+ const addButton=canAddDeduction&&meaningfulDeductionCount<10?`<button class="btn primary" type="button" onclick="addTotalTableDeductionRow()" title="Add a deduction">+ Add Deduction</button>`:'';
+ c.innerHTML=`<div id="totalTablePrintable" class="panel"><div class="report-head"><div><h2>TOTAL TABLE SUMMARY</h2><div class="small">All closed table results for business date ${date.split('-').reverse().join('/')} are converted to and shown in USD. Positive results are WIN; negative results are LOSS.</div></div><div class="actions report-no-print"><label style="display:flex;align-items:center;gap:7px;font-weight:700">Business Date <input id="totalBizDate" type="date" value="${date}" onchange="renderTotalTableSummary(this.value)"></label><button class="btn muted" type="button" onclick="printTotalTable()">🖨 Print</button><button class="btn primary" type="button" onclick="downloadTotalTablePDF()">📄 Download PDF</button></div></div>
+ <div class="panel" style="margin-top:14px"><table><thead><tr><th>TABLE</th><th style="text-align:right">WIN (USD)</th><th style="text-align:right">LOSS (USD)</th></tr></thead><tbody>${totalTableNames().map(k=>{const v=Number(results[k]||0);return `<tr><td>${totalTableDisplayName(k)}</td><td style="text-align:right;font-weight:700">${v>0?'USD '+tableMoney(v):''}</td><td style="text-align:right;font-weight:700">${v<0?'USD '+tableMoney(v):''}</td></tr>`}).join('')}<tr><td style="font-weight:800">TOTAL TABLE RESULT</td><td style="text-align:right;font-weight:900">USD ${tableMoney(win)}</td><td style="text-align:right;font-weight:900">USD ${tableMoney(loss)}</td></tr><tr><td style="font-weight:900">TOTAL TABLE RESULT (NET)</td><td colspan="2" style="text-align:right;font-weight:900;font-size:16px">USD ${tableMoney(total)}</td></tr></tbody></table></div>
+ <div class="panel" style="margin-top:14px"><div class="report-head"><div><h3 style="margin:0">DEDUCTIONS</h3><div class="small">Add only the deductions that apply. Only entered deductions are shown or printed.</div></div><div class="actions report-no-print">${addButton}</div></div><div class="table-scroll" style="margin-top:10px"><table><thead><tr><th style="width:70px">#</th><th>DESCRIPTION</th><th style="width:260px;text-align:right">AMOUNT (USD)</th></tr></thead><tbody>${deductionRows||`<tr><td colspan="3" class="small">No deductions entered for this business date.</td></tr>`}<tr><td colspan="2" style="font-weight:900;text-align:right">TOTAL DEDUCTION (USD)</td><td><input id="totalDeduction" value="USD ${tableMoney(ded)}" disabled style="font-weight:900;text-align:right"></td></tr></tbody></table></div><div class="hint">${canAddDeduction?'Manager and Pit Manager can add or edit deductions.':'View only.'}</div></div>
+ <div class="panel" style="margin-top:14px"><div class="formgrid"><div class="field"><label>FINAL RESULT (USD)</label><input id="totalFinalResult" value="USD ${tableMoney(total-ded)}" disabled style="font-weight:900"></div></div></div>
+ <div class="calcbox" style="margin-top:14px"><b>FINAL RESULT = TOTAL TABLE RESULT − TOTAL DEDUCTION</b></div></div>`;
+}
+function addTotalTableDeductionRow(){
+ const date=(document.getElementById('totalBizDate')?.value||tableBusinessDate()).slice(0,10);
+ const existing=totalTableDeductionRows(date).filter(r=>r.active!==false && (String(r.name||'').trim()!=='' || Number(r.value||0)>0));
+ if(existing.length>=10)return alert('Maximum 10 deductions allowed.');
+ existing.push({name:'',value:0,active:true,editing:true});
+ const all=totalTableDeductions();all[date]=existing;saveTotalTableDeductions(all);
+ renderTotalTableSummary(date);
+ setTimeout(()=>document.getElementById(`dedName-${existing.length-1}`)?.focus(),50);
+}
+function updateTotalTableDeductions(){
+ const date=(document.getElementById('totalBizDate')?.value||tableBusinessDate()).slice(0,10);
+ const old=totalTableDeductionRows(date);
+ const rows=old.map((r,i)=>({name:String(document.getElementById(`dedName-${i}`)?.value??r.name??'').trim(),value:Number((document.getElementById(`dedValue-${i}`)?.value ?? r.value ?? 0)),active:true,editing:false})).filter(r=>r.name!==''||r.value>0);
+ const d=totalTableDeductions();d[date]=rows;saveTotalTableDeductions(d);
+ const ded=rows.reduce((s,r)=>s+Number(r.value||0),0),results=totalTableClosedResults(date),total=totalTableNames().reduce((s,k)=>s+Number(results[k]||0),0);
+ const out=document.getElementById('totalDeduction'),final=document.getElementById('totalFinalResult');
+ if(out)out.value='USD '+tableMoney(ded);if(final)final.value='USD '+tableMoney(total-ded);
+}
+function updateTotalTableFinal(){updateTotalTableDeductions();}
+function totalTableHtml(date){const results=totalTableClosedResults(date),rows=totalTableDeductionRows(date),ded=rows.reduce((s,r)=>s+Number(r.value||0),0),total=totalTableNames().reduce((s,k)=>s+Number(results[k]||0),0),win=totalTableNames().reduce((s,k)=>s+(Number(results[k]||0)>0?Number(results[k]):0),0),loss=totalTableNames().reduce((s,k)=>s+(Number(results[k]||0)<0?Number(results[k]):0),0);return `<h1>86 CASINO — TOTAL TABLE SUMMARY</h1><div>Business Date: ${date.split('-').reverse().join('/')}</div><table><tr><th>TABLE</th><th>WIN (USD)</th><th>LOSS (USD)</th></tr>${totalTableNames().map(k=>{const v=Number(results[k]||0);return `<tr><td>${totalTableDisplayName(k)}</td><td>${v>0?'USD '+tableMoney(v):''}</td><td>${v<0?'USD '+tableMoney(v):''}</td></tr>`}).join('')}<tr><td><b>TOTAL TABLE RESULT</b></td><td><b>USD ${tableMoney(win)}</b></td><td><b>USD ${tableMoney(loss)}</b></td></tr><tr><td colspan="2"><b>TOTAL TABLE RESULT (NET)</b></td><td><b>USD ${tableMoney(total)}</b></td></tr></table><h2>DEDUCTIONS</h2><table><tr><th>#</th><th>DESCRIPTION</th><th>AMOUNT (USD)</th></tr>${rows.filter(r=>String(r.name||'').trim()!==''||Number(r.value||0)>0).map((r,i)=>`<tr><td>${i+1}</td><td>${tableEsc(r.name)||'—'}</td><td>${r.value?'USD '+tableMoney(r.value):'—'}</td></tr>`).join('')||'<tr><td colspan="3">No deductions entered.</td></tr>'}<tr><td colspan="2"><b>TOTAL DEDUCTION (USD)</b></td><td><b>USD ${tableMoney(ded)}</b></td></tr></table><div class="summary"><div>FINAL RESULT (USD): <b>USD ${tableMoney(total-ded)}</b></div></div>`;}
+function printTotalTable(){const date=document.getElementById('totalBizDate')?.value||tableBusinessDate(),w=window.open('','_blank');if(!w)return;w.document.write(`<html><head><title>Total Table Summary</title><style>@page{size:A4 portrait;margin:12mm}body{font-family:Arial,sans-serif;color:#18232c;font-size:12px}h1{font-size:19px;margin:0 0 5px}h2{font-size:15px;margin:18px 0 8px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #999;padding:7px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f1f3f5}.summary{margin-top:18px;border:1px solid #999;padding:12px;font-size:16px;font-weight:900}</style></head><body>${totalTableHtml(date)}</body></html>`);w.document.close();w.focus();setTimeout(()=>w.print(),250);}
+function downloadTotalTablePDF(){printTotalTable();}
+
+function printTable(key,date){
+ const rec=tableRecords().find(x=>x.businessDate===date&&x.tableCode===key);if(!rec)return alert('No table opening record found for this business date.');const cfg=TABLE_CONFIG[key],close=rec.closing||[],ops=tableOpTotals(date,key),rows=cfg.denoms.map((d,i)=>`<tr><td>${d[0].toLocaleString()}</td><td>${d[1]}</td><td>${tableMoney(d[0]*d[1])}</td><td>${close[i]??''}</td><td>${tableMoney(d[0]*Number(close[i]||0))}</td><td>${tableMoney(Number(close[i]||0)-d[1])}</td></tr>`).join('');const opRows=ops.rows.map((x,i)=>`<tr><td>${i+1}</td><td>${new Date(x.date).toLocaleString()}</td><td>${x.type}</td><td>${cfg.currency} ${tableMoney(x.amount)}</td><td>${tableEsc(x.recordedBy||'')}</td></tr>`).join('');const nativeLabel=cfg.currency==='GHS'?`<div class="line"><span>CEDIS RESULT</span><span>GHS ${tableMoney(rec.resultNative)}</span></div>`:'';const w=window.open('','_blank');if(!w)return;w.document.write(`<html><head><title>${cfg.name} - Table Opening Closing</title><style>@page{size:A4 portrait;margin:10mm}body{font-family:Arial,sans-serif;color:#18232c;font-size:11px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 8px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:5px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f1f3f5}.summary{margin-top:14px;border:1px solid #aaa;padding:10px}.line{display:flex;justify-content:space-between;padding:3px 0}.result{font-size:15px;font-weight:800}.audit{margin-top:14px;border:1px solid #aaa;padding:10px;line-height:1.7}</style></head><body><h1>86 CASINO — TABLE OPENING / CLOSING SHEET</h1><div>Business Date: ${date.split('-').reverse().join('/')} &nbsp; | &nbsp; Table: <b>${cfg.name} (${key})</b> &nbsp; | &nbsp; Currency: <b>${cfg.currency}</b></div><h2>Opening / Closing Chips</h2><table><tr><th>Denom</th><th>Opening PCS</th><th>Opening Value</th><th>Closing PCS</th><th>Closing Value</th><th>+ / − PCS</th></tr>${rows}</table><div class="summary"><div class="line"><span>Opening Total</span><b>${cfg.currency} ${tableMoney(rec.openingTotal)}</b></div><div class="line"><span>Closing Total</span><b>${cfg.currency} ${tableMoney(rec.closingTotal)}</b></div><div class="line"><span>Total Table Fill</span><b>${cfg.currency} ${tableMoney(ops.fill)}</b></div><div class="line"><span>Total Table Credit</span><b>${cfg.currency} ${tableMoney(ops.credit)}</b></div>${nativeLabel}<div class="line result"><span>TABLE RESULT (USD)</span><span>USD ${tableMoney(rec.resultUsd)}</span></div></div>${opRows?`<h2>Table Fill / Table Credit — Operation Detail</h2><table><tr><th>#</th><th>Date / Time</th><th>Type</th><th>Amount</th><th>Recorded By</th></tr>${opRows}</table>`:''}<div class="audit"><b>OPENED BY — ALL 4 REQUIRED</b><br>Cashier: ${tableEsc(rec.openedCashierName||'')}<br>Dealer: ${tableEsc(rec.openedDealerName||'')}<br>Inspector: ${tableEsc(rec.openedInspectorName||'')}<br>Pit Manager: ${tableEsc(rec.openedPitManagerName||'')}<br><br><b>CLOSED BY — ALL 4 REQUIRED</b><br>Cashier: ${tableEsc(rec.closedCashierName||'')}<br>Dealer: ${tableEsc(rec.closedDealerName||'')}<br>Inspector: ${tableEsc(rec.closedInspectorName||'')}<br>Pit Manager: ${tableEsc(rec.closedPitManagerName||'')}<br><br><b>Opening Time:</b> ${new Date(rec.openedAt).toLocaleString()} &nbsp; | &nbsp; <b>Closing Time:</b> ${rec.closedAt?new Date(rec.closedAt).toLocaleString():'—'}</div></body></html>`);w.document.close();w.focus();setTimeout(()=>w.print(),250);
+}
+
+
+/* V1.100 — Daily Balance & Reconciliation */
+const BAL_GHC_CASH=[200,100,50,20,10,5,1];
+const BAL_USD_CASH=[100,50,20,10,5,1];
+const BAL_EUR_CASH=[100,50,20,10,5,1];
+const BAL_GBP_CASH=[100,50,20,10,5,1];
+const BAL_CHIPS=[25000,10000,5000,1000,500,100,50,25,10,5,2.5,1,0.5];
+function balanceCanEdit(){return userRole()==='Cashier'||userRole()==='Manager';}
+function balanceIsManager(){return userRole()==='Manager';}
+function balanceStore(){try{return JSON.parse(localStorage.getItem('casinoBalances')||'{}')||{};}catch(e){return {};}}
+function saveBalanceStore(x){localStorage.setItem('casinoBalances',JSON.stringify(x));}
+function balanceDefaultDate(){return businessDateForNow();}
+function balMoney(n){return Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function balanceRate(){return Number(getManagerUsdRate())||1;}
+function balanceCurrencyRate(currency,r){
+ if(currency==='USD')return 1;
+ if(currency==='GHS')return Number(r?.usdRate)||balanceRate();
+ if(currency==='EUR'){
+   if(Number(r?.eurRate)>0) return Number(r.eurRate);
+   if(Number(r?.eur)>0) return Number(r.eur);
+   return Number(getCurrencyRate('EUR'))||1;
+ }
+ if(currency==='GBP'){
+   if(Number(r?.gbpRate)>0) return Number(r.gbpRate);
+   if(Number(r?.gbp)>0) return Number(r.gbp);
+   return Number(getCurrencyRate('GBP'))||1;
+ }
+ return 1;
+}
+function balToUsd(amount,currency,r){const a=Number(amount||0);if(currency==='GHS')return a/balanceCurrencyRate('GHS',r);if(currency==='EUR')return a*balanceCurrencyRate('EUR',r);if(currency==='GBP')return a*balanceCurrencyRate('GBP',r);return a;}
+function balanceRecordDate(x){const bd=String(x?.businessDate||'').trim();if(bd)return bd;const raw=x?.date||x?.createdAt||x?.timestamp;if(!raw)return '';const d=new Date(raw);if(Number.isNaN(d.getTime()))return '';if(d.getHours()<18)d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+function balanceRatesForDate(r){return {usd:Number(r?.usdRate)||balanceRate(),eurRate:Number(r?.eurRate)||Number(getCurrencyRate('EUR'))||1,gbpRate:Number(r?.gbpRate)||Number(getCurrencyRate('GBP'))||1};}
+function balanceTotalsForRecords(date){
+ const target=String(date||'').trim();
+ const sameDate=x=>balanceRecordDate(x)===target;
+ const ops=tableOps().filter(sameDate);
+ const completedOps=ops.filter(x=>tableOpStatus(x)==='COMPLETED');
+ const opUsd=x=>Number(x?.usd!=null?x.usd:balToUsd(x?.amount||0,x?.currency||'USD',null));
+ const fill=completedOps.filter(x=>String(x.type||'').toUpperCase()==='FILL').reduce((s,x)=>s+opUsd(x),0);
+ const credit=completedOps.filter(x=>String(x.type||'').toUpperCase()==='CREDIT').reduce((s,x)=>s+opUsd(x),0);
+ const rows=Array.isArray(tx)?tx.filter(sameDate):[];
+ const customerCredit=rows.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.status==='PAID_GIVEN')).reduce((s,x)=>s+Number(x.usd!=null?x.usd:x.amount||0),0);
+ const customerDeposit=rows.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED')).reduce((s,x)=>s+Number(x.usd!=null?x.usd:x.amount||0),0);
+ const method=x=>String(x?.method||'').toLowerCase().replace(/[\s_]+/g,' ').trim();
+ const isMethod=(x,terms)=>{const m=method(x);return terms.some(t=>m===t||m.includes(t));};
+ const signed=x=>(x.type==='BUY_IN'?1:x.type==='CASH_OUT'?-1:0)*Number(x.usd||0);
+ const visaZenith=rows.filter(x=>isMethod(x,['zenith','visa','bank / card','bank card','zenith bank'])).reduce((s,x)=>s+signed(x),0);
+ const momo477=rows.filter(x=>isMethod(x,['momo - 477','momo 477','momo477','477'])).reduce((s,x)=>s+signed(x),0);
+ const momo171=rows.filter(x=>isMethod(x,['momo - 171','momo 171','momo171','171'])).reduce((s,x)=>s+signed(x),0);
+ const paidRewards=rows.filter(x=>x.type==='REWARD'&&String(x.status||'').toUpperCase()==='PAID_GIVEN'&&String(x.action||'').toUpperCase()==='REWARD_PAID_GIVEN');
+ // Bonus is ONLY rewards actually issued/paid for this Business Date.
+ // Lucky Chips are deliberately excluded because they are GHS chip rewards, not Bonus.
+ const totalCashback=paidRewards.filter(x=>String(x.rewardType||'').toUpperCase()==='CASHBACK').reduce((s,x)=>s+Number(x.amount||0),0);
+ const totalDailyDraw=paidRewards.filter(x=>String(x.rewardType||'').toUpperCase()==='DAILY_DRAW').reduce((s,x)=>s+Number(x.amount||0),0);
+ return {fill,credit,customerCredit,customerDeposit,visaZenith,momo477,momo171,totalCashback,totalDailyDraw};
+}
+function balanceEmptyRecord(date){return {date,openingCashGhc:[],openingCashUsd:[],openingChipsGhc:[],openingChipsUsd:[],closingCashGhc:[],closingCashUsd:[],closingCashEur:[],closingCashGbp:[],closingChipsGhc:[],closingChipsUsd:[],floatIncreaseChips:0,floatIncreaseChipsCurrency:'USD',floatIncreaseCash:0,floatIncreaseCashCurrency:'USD',floatDecreaseChips:0,floatDecreaseChipsCurrency:'USD',floatDecreaseCash:0,floatDecreaseCashCurrency:'USD',openingTime:'',closingTime:'',openingCashier:'',closingCashier:'',usdRate:balanceRate(),eurRate:Number(getCurrencyRate('EUR'))||1,gbpRate:Number(getCurrencyRate('GBP'))||1,openingLocked:false,closingLocked:false,rateModel:'directUsd'};}
+function getBalanceRecord(date){const s=balanceStore();const r=s[date];if(r){const out={...balanceEmptyRecord(date),...r};if(out.rateModel==='directUsd'){const usd=Number(out.usdRate)||balanceRate();if(Number(out.eurRate)>3)out.eurRate=Number(out.eurRate)/usd;if(Number(out.gbpRate)>3)out.gbpRate=Number(out.gbpRate)/usd;}else if(!out.rateModel&&((Number(out.eurRate)>3)||(Number(out.gbpRate)>3))){out.rateModel='legacyGhs';}return out;}return balanceEmptyRecord(date);}
+function balanceSection(currency,label,denoms,vals,editable,prefix,rateRec){
+ const dis=editable?'':'disabled';
+ const total=denoms.reduce((s,d,i)=>s+d*Number(vals?.[i]||0),0);
+ const usdTotal=denoms.reduce((s,d,i)=>s+balToUsd(d*Number(vals?.[i]||0),currency,rateRec),0);
+ return `<div class="balance-mini"><h3>${label}</h3><table><tr><th>DENOMINATION</th><th>QTY</th><th>TOTAL (${currency})</th>${currency==='GHS'?'<th>USD EQUIVALENT</th>':''}</tr>${denoms.map((d,i)=>{const q=Number(vals?.[i]||0),usd=balToUsd(d*q,currency,rateRec);return `<tr><td>${d.toLocaleString()}</td><td><input class="bal-qty" type="number" min="0" step="1" data-prefix="${prefix}" data-index="${i}" value="${q||''}" ${dis} oninput="updateBalanceCalc()"></td><td id="${prefix}-tot-${i}">${balMoney(d*q)}</td>${currency==='GHS'?`<td id="${prefix}-usd-${i}">USD ${balMoney(usd)}</td>`:''}</tr>`}).join('')}<tr><td><b>TOTAL</b></td><td></td><td><b id="${prefix}-total">${balMoney(total)}</b></td>${currency==='GHS'?`<td><b id="${prefix}-usd-total">USD ${balMoney(usdTotal)}</b></td>`:''}</tr></table></div>`;
+}
+function balanceManualAmount(label,id,record,currencyOptions,editable){const cur=record?.[id+'Currency']||currencyOptions[0];return `<div class="field"><label>${label}</label><div style="display:grid;grid-template-columns:1fr 105px;gap:8px"><input id="${id}" type="number" min="0" step="0.01" value="${record?.[id]??''}" ${editable?'':'disabled'} oninput="updateBalanceCalc()"><select id="${id}Currency" ${editable?'':'disabled'} onchange="updateBalanceCalc()">${currencyOptions.map(x=>`<option value="${x}" ${x===cur?'selected':''}>${x}</option>`).join('')}</select></div></div>`;}
+function balanceValues(r){
+ const sums=(arr,ds)=>ds.reduce((s,d,i)=>s+d*Number(arr?.[i]||0),0);
+ const openingCashG=sums(r.openingCashGhc,BAL_GHC_CASH),openingCashU=sums(r.openingCashUsd,BAL_USD_CASH),openingChipsG=sums(r.openingChipsGhc,BAL_CHIPS),openingChipsU=sums(r.openingChipsUsd,BAL_CHIPS);
+ const closingCashG=sums(r.closingCashGhc,BAL_GHC_CASH),closingCashU=sums(r.closingCashUsd,BAL_USD_CASH),closingCashE=sums(r.closingCashEur,BAL_EUR_CASH),closingCashB=sums(r.closingCashGbp,BAL_GBP_CASH),closingChipsG=sums(r.closingChipsGhc,BAL_CHIPS),closingChipsU=sums(r.closingChipsUsd,BAL_CHIPS);
+ const cv=(v,c)=>balToUsd(v,c,r);
+ const auto=balanceTotalsForRecords(r.date);
+ // Build USD totals strictly from the denomination totals displayed above.
+ const openingCashGUsd=cv(openingCashG,'GHS'), openingChipsGUsd=cv(openingChipsG,'GHS');
+ const closingCashGUsd=cv(closingCashG,'GHS'), closingChipsGUsd=cv(closingChipsG,'GHS');
+ const closingCashEUsd=cv(closingCashE,'EUR'), closingCashBUsd=cv(closingCashB,'GBP');
+ const floatIncCashUsd=cv(Number(r.floatIncreaseCash||0),r.floatIncreaseCashCurrency||'USD');
+ const floatIncChipsUsd=cv(Number(r.floatIncreaseChips||0),r.floatIncreaseChipsCurrency||'USD');
+ const floatDecCashUsd=cv(Number(r.floatDecreaseCash||0),r.floatDecreaseCashCurrency||'USD');
+ const floatDecChipsUsd=cv(Number(r.floatDecreaseChips||0),r.floatDecreaseChipsCurrency||'USD');
+ const totalOpening=openingCashGUsd+openingCashU+openingChipsGUsd+openingChipsU+floatIncCashUsd+floatIncChipsUsd+Number(auto.customerDeposit||0);
+ const totalClosing=closingChipsGUsd+closingChipsU+Number(auto.customerCredit||0)+closingCashGUsd+closingCashU+closingCashEUsd+closingCashBUsd+Number(auto.momo171||0)+Number(auto.momo477||0)+Number(auto.visaZenith||0)+floatDecCashUsd+floatDecChipsUsd;
+ const bonus=Number(auto.totalCashback||0)+Number(auto.totalDailyDraw||0);
+ const result=totalClosing-totalOpening+bonus;
+ const balancing=totalClosing-totalOpening-result;
+ return {openingCashG,openingCashU,openingChipsG,openingChipsU,closingCashG,closingCashU,closingCashE,closingCashB,closingChipsG,closingChipsU,totalOpening,totalClosing,bonus,balancing,result,auto};
+}
+function balanceLocalDateTimeNow(){
+ const d=new Date(),pad=n=>String(n).padStart(2,'0');
+ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function balanceLocalDateTimeValue(v){
+ if(!v)return balanceLocalDateTimeNow();
+ const s=String(v);
+ if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s))return s.slice(0,16);
+ const d=new Date(s); if(Number.isNaN(d.getTime()))return balanceLocalDateTimeNow();
+ const pad=n=>String(n).padStart(2,'0');
+ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function renderBalancePage(){
+ try{
+ const c=document.getElementById('content');
+ const date=(document.getElementById('balanceBizDate')?.value||balanceDefaultDate()).slice(0,10);
+ const r=getBalanceRecord(date), manager=balanceIsManager(), edit=balanceCanEdit()&&(!isBusinessDateClosed(date)||manager), v=balanceValues(r), auto=v.auto;
+ const openingEdit=edit&&(!r.openingLocked||manager), closingEdit=edit&&(!r.closingLocked||manager)&&(r.openingLocked||manager);
+ const openingTimeValue=balanceLocalDateTimeValue(r.openingTime);
+ const closingTimeValue=balanceLocalDateTimeValue(r.closingTime);
+ const rateRec=balanceRatesForDate(r);
+ const lockText=r.openingLocked?'🔒 OPENING LOCKED':'OPENING NOT SAVED';
+ const closeLockText=r.closingLocked?'🔒 CLOSING LOCKED':(r.openingLocked?'CLOSING OPEN FOR ENTRY':'SAVE OPENING FIRST');
+ c.innerHTML=`<div class="toolbar"><div class="field" style="min-width:220px"><label>Business Date</label><input id="balanceBizDate" type="date" value="${date}" onchange="renderBalancePage()"></div><div class="small">Manager USD Rate: <b>GHS ${rateRec.usd.toFixed(2)} = USD 1.00</b> &nbsp; | &nbsp; EUR: USD ${rateRec.eurRate.toFixed(2)} &nbsp; | &nbsp; GBP: USD ${rateRec.gbpRate.toFixed(2)}</div><div style="margin-left:auto" class="pill">${edit?'ENTRY / EDIT ENABLED':'VIEW ONLY'}</div></div>
+ <div class="panel"><div class="report-head"><div><h2 style="margin:0">86 CASINO — DAILY BALANCE & RECONCILIATION</h2><div class="small">Physical cash and chip counts are entered by Cashier. Automatic transaction totals are locked.</div></div><div class="actions report-no-print"><button class="btn muted" onclick="printBalance()">🖨 Print</button><button class="btn primary" onclick="printBalance()">📄 Download / Save PDF</button></div></div></div>
+ <div class="panel"><h3 style="margin:0 0 12px">SHIFT / AUDIT</h3><div class="formgrid"><div class="field"><label>Opening Time</label><input id="balOpeningTime" type="datetime-local" value="${openingTimeValue}" ${openingEdit?'':'disabled'}></div><div class="field"><label>Opening Cashier Name</label><input id="balOpeningCashier" value="${tableEsc(r.openingCashier||'')}" ${openingEdit?'':'disabled'}></div><div class="field"><label>Closing Time</label><input id="balClosingTime" type="datetime-local" value="${closingTimeValue}" ${closingEdit?'':'disabled'}></div><div class="field"><label>Closing Cashier Name</label><input id="balClosingCashier" value="${tableEsc(r.closingCashier||'')}" ${closingEdit?'':'disabled'}></div></div><div class="small" style="margin-top:8px">${lockText} &nbsp; | &nbsp; ${closeLockText}</div></div>
+ <div class="panel"><h2 style="margin:0 0 12px">OPENING</h2><div class="balance-pair"><div>${balanceSection('GHS','OPENING CHIPS — GHC',BAL_CHIPS,r.openingChipsGhc,openingEdit,'openingChipsGhc',r)}</div><div>${balanceSection('USD','OPENING CHIPS — USD',BAL_CHIPS,r.openingChipsUsd,openingEdit,'openingChipsUsd',r)}</div></div><div class="balance-pair" style="margin-top:14px"><div>${balanceSection('GHS','OPENING CASH — GHC',BAL_GHC_CASH,r.openingCashGhc,openingEdit,'openingCashGhc',r)}</div><div>${balanceSection('USD','OPENING CASH — USD',BAL_USD_CASH,r.openingCashUsd,openingEdit,'openingCashUsd',r)}</div></div><div class="actions" style="margin-top:14px">${openingEdit?`<button class="btn success" onclick="saveBalanceOpening()">💾 Save Opening</button>`:''}${r.openingLocked?'<span class="pill">🔒 Opening Saved & Locked</span>':''}</div></div>
+ <div class="panel"><h2 style="margin:0 0 12px">CLOSING</h2>${!r.openingLocked&&!manager?'<div class="calcbox" style="margin-bottom:14px"><b>Closing is not available yet.</b> Save the Casino Opening first.</div>':''}<div class="balance-pair"><div>${balanceSection('GHS','CLOSING CHIPS — GHC',BAL_CHIPS,r.closingChipsGhc,closingEdit,'closingChipsGhc',r)}</div><div>${balanceSection('USD','CLOSING CHIPS — USD',BAL_CHIPS,r.closingChipsUsd,closingEdit,'closingChipsUsd',r)}</div></div><div class="balance-pair" style="margin-top:14px"><div>${balanceSection('GHS','CLOSING CASH — GHC',BAL_GHC_CASH,r.closingCashGhc,closingEdit,'closingCashGhc',r)}</div><div>${balanceSection('USD','CLOSING CASH — USD',BAL_USD_CASH,r.closingCashUsd,closingEdit,'closingCashUsd',r)}</div></div><div class="balance-pair" style="margin-top:14px"><div>${balanceSection('EUR','CLOSING CASH — EUR',BAL_EUR_CASH,r.closingCashEur,closingEdit,'closingCashEur',r)}</div><div>${balanceSection('GBP','CLOSING CASH — GBP',BAL_GBP_CASH,r.closingCashGbp,closingEdit,'closingCashGbp',r)}</div></div><div class="actions" style="margin-top:14px">${closingEdit?`<button class="btn success" onclick="saveBalanceClosing()">💾 Save Closing</button>`:''}${r.closingLocked?'<span class="pill">🔒 Closing Saved & Locked</span>':''}</div></div>
+ <div class="panel"><h2 style="margin:0 0 12px">FLOAT MOVEMENT</h2><div class="formgrid">${balanceManualAmount('Float Increase — Cash','floatIncreaseCash',r,['USD','GHS'],edit)}${balanceManualAmount('Float Increase — Chips','floatIncreaseChips',r,['USD','GHS'],edit)}${balanceManualAmount('Float Decrease — Cash','floatDecreaseCash',r,['USD','GHS'],edit)}${balanceManualAmount('Float Decrease — Chips','floatDecreaseChips',r,['USD','GHS'],edit)}</div></div>
+ <div class="panel"><h2 style="margin:0 0 12px">AUTOMATIC TRANSACTION TOTALS 🔒</h2><table><tr><th>ITEM</th><th>USD</th></tr><tr><td>Total Table Fills</td><td><b id="balance-auto-fill">USD ${balMoney(auto.fill)}</b></td></tr><tr><td>Total Table Credits</td><td><b id="balance-auto-credit">USD ${balMoney(auto.credit)}</b></td></tr><tr><td>Total Customer Credit</td><td><b id="balance-auto-customer-credit">USD ${balMoney(auto.customerCredit)}</b></td></tr><tr><td>Total Customer Deposit</td><td><b id="balance-auto-customer-deposit">USD ${balMoney(auto.customerDeposit)}</b></td></tr><tr><td>Total Visa / Zenith</td><td><b id="balance-auto-visa">USD ${balMoney(auto.visaZenith)}</b></td></tr><tr><td>Total MoMo 477</td><td><b id="balance-auto-momo477">USD ${balMoney(auto.momo477)}</b></td></tr><tr><td>Total MoMo 171</td><td><b id="balance-auto-momo171">USD ${balMoney(auto.momo171)}</b></td></tr></table><div class="hint">These totals are pulled automatically for the selected business date. No manual editing is permitted.</div></div>
+ <div class="panel"><h2 style="margin:0 0 12px">FINAL BALANCE SUMMARY — USD</h2><table><tr><th>ITEM</th><th>AMOUNT</th></tr><tr><td><b>TOTAL OPENING</b></td><td><b id="balance-total-opening">USD ${balMoney(v.totalOpening)}</b></td></tr><tr><td><b>TOTAL CLOSING</b></td><td><b id="balance-total-closing">USD ${balMoney(v.totalClosing)}</b></td></tr><tr><td><b>BONUS</b></td><td><b id="balance-bonus">USD ${balMoney(v.bonus)}</b></td></tr><tr><td><b>BALANCING</b></td><td><b id="balance-balancing">USD ${balMoney(v.balancing)}</b></td></tr><tr><td><b>RESULT</b></td><td><b id="balance-result">USD ${balMoney(v.result)}</b></td></tr></table></div>
+ <div class="actions">${edit?'<button class="btn muted" onclick="renderBalancePage()">Refresh</button>':''}</div>`;
+ updateBalanceCalc();
+ }catch(err){ console.error("Daily Balance render error",err); const c=document.getElementById('content'); if(c)c.innerHTML=`<div class="panel"><h2>Daily Balance</h2><div class="calcbox"><b>Daily Balance could not be displayed.</b><br>Please refresh the page. If the problem continues, contact Manager.</div></div>`; }
+}
+function updateBalanceCalc(){
+ const date=document.getElementById('balanceBizDate')?.value;if(!date)return;
+ const r=getBalanceRecord(date);if(!r||typeof r!=='object')return;
+ document.querySelectorAll('.bal-qty').forEach(i=>{
+   const p=i.dataset.prefix,idx=Number(i.dataset.index);
+   if(!Array.isArray(r[p]))r[p]=[];
+   r[p][idx]=Number(i.value||0);
+   const ds={openingChipsGhc:BAL_CHIPS,openingChipsUsd:BAL_CHIPS,closingChipsGhc:BAL_CHIPS,closingChipsUsd:BAL_CHIPS,openingCashGhc:BAL_GHC_CASH,openingCashUsd:BAL_USD_CASH,closingCashGhc:BAL_GHC_CASH,closingCashUsd:BAL_USD_CASH,closingCashEur:BAL_EUR_CASH,closingCashGbp:BAL_GBP_CASH}[p]||[];
+   const q=Number(i.value||0),d=Number(ds[idx]||0);
+   const t=document.getElementById(`${p}-tot-${idx}`);if(t)t.textContent=balMoney(d*q);
+   const u=document.getElementById(`${p}-usd-${idx}`);if(u)u.textContent='USD '+balMoney(balToUsd(d*q,p.includes('Eur')?'EUR':p.includes('Gbp')?'GBP':p.toLowerCase().includes('usd')?'USD':'GHS',r));
+ });
+ ['floatIncreaseCash','floatIncreaseChips','floatDecreaseCash','floatDecreaseChips'].forEach(id=>{
+   const e=document.getElementById(id);if(e)r[id]=Number(e.value||0);
+   const s=document.getElementById(id+'Currency');if(s)r[id+'Currency']=s.value;
+ });
+ const ids=['openingCashGhc','openingCashUsd','openingChipsGhc','openingChipsUsd','closingCashGhc','closingCashUsd','closingCashEur','closingCashGbp','closingChipsGhc','closingChipsUsd'];
+ ids.forEach(p=>{
+   const ds={openingChipsGhc:BAL_CHIPS,openingChipsUsd:BAL_CHIPS,closingChipsGhc:BAL_CHIPS,closingChipsUsd:BAL_CHIPS,openingCashGhc:BAL_GHC_CASH,openingCashUsd:BAL_USD_CASH,closingCashGhc:BAL_GHC_CASH,closingCashUsd:BAL_USD_CASH,closingCashEur:BAL_EUR_CASH,closingCashGbp:BAL_GBP_CASH}[p]||[];
+   const currency=p.includes('Eur')?'EUR':p.includes('Gbp')?'GBP':p.toLowerCase().includes('usd')?'USD':'GHS';
+   const total=ds.reduce((s,d,i)=>s+d*Number(r[p]?.[i]||0),0);
+   const e=document.getElementById(p+'-total');if(e)e.textContent=balMoney(total);
+   const eu=document.getElementById(p+'-usd-total');if(eu)eu.textContent='USD '+balMoney(ds.reduce((s,d,i)=>s+balToUsd(d*Number(r[p]?.[i]||0),currency,r),0));
+ });
+ // Live Final Balance Summary: recalculate from the values currently on screen,
+ // plus all automatic transactions for the selected Business Date. Saving Closing is not required.
+ const v=balanceValues(r);
+ const live={
+   'balance-total-opening':v.totalOpening,
+   'balance-total-closing':v.totalClosing,
+   'balance-bonus':v.bonus,
+   'balance-balancing':v.balancing,
+   'balance-result':v.result
+ };
+ Object.entries(live).forEach(([id,val])=>{const e=document.getElementById(id);if(e)e.textContent='USD '+balMoney(val);});
+ // Keep automatic totals on the page live as well.
+ const autoMap={
+   'balance-auto-fill':v.auto.fill,
+   'balance-auto-credit':v.auto.credit,
+   'balance-auto-customer-credit':v.auto.customerCredit,
+   'balance-auto-customer-deposit':v.auto.customerDeposit,
+   'balance-auto-visa':v.auto.visaZenith,
+   'balance-auto-momo477':v.auto.momo477,
+   'balance-auto-momo171':v.auto.momo171
+ };
+ Object.entries(autoMap).forEach(([id,val])=>{const e=document.getElementById(id);if(e)e.textContent='USD '+balMoney(val);});
+}
+function initLiveBalanceRefresh(){
+ if(window._liveBalanceRefreshInstalled)return;
+ window._liveBalanceRefreshInstalled=true;
+ window.addEventListener('storage',function(e){
+   if(['tx','casinoTableOperations','casinoBalances','casinoCurrencyRates','casinoForeignUsdRates'].includes(e.key)){
+     if(location.hash==='#balance')setTimeout(()=>{try{updateBalanceCalc();}catch(_){ }},0);
+   }
+ });
+ setInterval(()=>{if(location.hash==='#balance'){try{updateBalanceCalc();}catch(_){}}},2000);
+}
+
+function readBalanceForm(){
+ const date=document.getElementById('balanceBizDate')?.value||balanceDefaultDate(),r=getBalanceRecord(date);
+ ['openingChipsGhc','openingChipsUsd','closingChipsGhc','closingChipsUsd','openingCashGhc','openingCashUsd','closingCashGhc','closingCashUsd','closingCashEur','closingCashGbp'].forEach(p=>{r[p]=[...document.querySelectorAll(`.bal-qty[data-prefix="${p}"]`)].map(x=>Number(x.value||0));});
+ ['floatIncreaseCash','floatIncreaseChips','floatDecreaseCash','floatDecreaseChips'].forEach(id=>{r[id]=Number(document.getElementById(id)?.value||0);r[id+'Currency']=document.getElementById(id+'Currency')?.value||r[id+'Currency']||'USD';});
+ r.openingTime=document.getElementById('balOpeningTime')?.value||r.openingTime;r.openingCashier=(document.getElementById('balOpeningCashier')?.value||'').trim();r.closingTime=document.getElementById('balClosingTime')?.value||r.closingTime;r.closingCashier=(document.getElementById('balClosingCashier')?.value||'').trim();
+ r.usdRate=Number(r.usdRate)||balanceRate();r.eurRate=Number(r.eurRate)||Number(getCurrencyRate('EUR'))||1;r.gbpRate=Number(r.gbpRate)||Number(getCurrencyRate('GBP'))||1;r.rateModel='directUsd';r.lastSavedBy=currentUser?.name||currentUser?.username||'';r.lastSavedAt=new Date().toISOString();return r;
+}
+function saveBalanceOpening(){
+ if(isBusinessDateClosed(document.getElementById('balanceBizDate')?.value||businessDateForNow())&&!balanceIsManager())return alert('This Business Date is already closed. Only Manager can edit it.');
+ if(!balanceCanEdit())return alert('Only Cashier or Manager can edit the Balance.');
+ const date=document.getElementById('balanceBizDate')?.value;if(!date)return alert('Select a Business Date.');
+ const r=readBalanceForm();if(!r.openingCashier)return alert('Opening Cashier Name is required.');
+ if(!r.openingTime)r.openingTime=balanceLocalDateTimeNow();
+ const manager=balanceIsManager();
+ const msg=manager&&r.openingLocked?'Manager override: update the locked Casino Opening for '+date+'?':'CONFIRM CASINO OPENING for '+date+'? Once confirmed, Opening Cash and Opening Chips cannot be edited by Cashier.';
+ if(!confirm(msg))return;
+ r.openingLocked=true;r.openingConfirmedAt=r.openingConfirmedAt||new Date().toISOString();r.openingConfirmedBy=currentUser?.name||currentUser?.username||'';
+ const s=balanceStore();s[date]=r;saveBalanceStore(s);alert('Casino Opening saved and locked for '+date+'.');renderBalancePage();
+}
+function saveBalanceClosing(){
+ if(!balanceCanEdit())return alert('Only Cashier or Manager can edit the Balance.');
+ const date=document.getElementById('balanceBizDate')?.value;if(!date)return alert('Select a Business Date.');
+ if(isBusinessDateClosed(date)&&!balanceIsManager())return alert('This Business Date is already closed. Only Manager can edit it.');
+ const existing=getBalanceRecord(date);if(!existing.openingLocked&&!balanceIsManager())return alert('Save Casino Opening before saving Closing.');
+ const pending=dayEndPending(date);if(pending.length)return alert('DAY END CANNOT BE COMPLETED. Please complete all pending actions first:\n\n• '+pending.join('\n• '));
+ const r=readBalanceForm();if(!r.closingCashier)return alert('Closing Cashier Name is required.');
+ if(!r.closingTime)r.closingTime=balanceLocalDateTimeNow();
+ const msg=balanceIsManager()&&r.closingLocked?'Manager override: update the locked Casino Closing for '+date+'?':'CONFIRM CASINO CLOSING for '+date+'? Once confirmed, Closing values cannot be edited by Cashier and the Business Date will be closed for all transaction entry.';
+ if(!confirm(msg))return;
+ r.openingLocked=existing.openingLocked||r.openingLocked;r.closingLocked=true;r.closingConfirmedAt=r.closingConfirmedAt||new Date().toISOString();r.closingConfirmedBy=currentUser?.name||currentUser?.username||'';
+ const s=balanceStore();s[date]=r;saveBalanceStore(s);markBusinessDateClosed(date,currentUser?.name||currentUser?.username||'');alert('Casino Closing saved. Business Date '+date+' is now CLOSED. Only Manager can edit or correct closed-day records.');renderBalancePage();
+}
+function balancePrintHtml(date,recordOverride){
+ const r=recordOverride||getBalanceRecord(date),v=balanceValues(r),a=v.auto,rateRec=balanceRatesForDate(r);
+ const money=n=>balMoney(Number(n||0));
+ const qtys=arr=>Array.isArray(arr)?arr:[];
+ const single=(title,ds,vals,currency,showGhsUsd=false)=>{
+   const rows=ds.map((d,i)=>{const q=Number(qtys(vals)[i]||0);return `<tr><td>${d}</td><td>${q}</td><td>${money(d*q)}</td></tr>`}).join('');
+   const total=ds.reduce((sum,d,i)=>sum+d*Number(qtys(vals)[i]||0),0);
+   const usdLine=showGhsUsd?`<div class="usdline">GHC → USD: <b>Opening/Closing equivalent USD ${money(balToUsd(total,'GHS',rateRec))}</b></div>`:(currency==='EUR'||currency==='GBP'?`<div class="usdline">USD Equivalent: <b>USD ${money(balToUsd(total,currency,rateRec))}</b></div>`:'');
+   return `<div class="pblock"><h3>${title} — ${currency}</h3><table><tr><th>DENOM.</th><th>QTY</th><th>TOTAL</th></tr>${rows}<tr class="total"><td>TOTAL</td><td></td><td>${currency} ${money(total)}</td></tr></table>${usdLine}</div>`;
+ };
+ const autoRows=[['Total Table Fills',a.fill],['Total Table Credits',a.credit],['Total Customer Credit',a.customerCredit],['Total Customer Deposit',a.customerDeposit],['Total Visa / Zenith',a.visaZenith],['Total MoMo 477',a.momo477],['Total MoMo 171',a.momo171]];
+ return `<div class="print-wrap">
+ <div class="print-title"><h1>86 CASINO — DAILY BALANCE & RECONCILIATION</h1><div><b>Business Date:</b> ${date.split('-').reverse().join('/')} &nbsp; | &nbsp; <b>USD Rate:</b> GHS ${rateRec.usd.toFixed(2)} = USD 1.00 &nbsp; | &nbsp; <b>EUR:</b> USD ${rateRec.eurRate.toFixed(2)} &nbsp; | &nbsp; <b>GBP:</b> USD ${rateRec.gbpRate.toFixed(2)}</div><div><b>Opening:</b> ${r.openingTime||'—'} / ${tableEsc(r.openingCashier||'')} &nbsp;&nbsp; <b>Closing:</b> ${r.closingTime||'—'} / ${tableEsc(r.closingCashier||'')}</div></div>
+ <div class="section-label">OPENING / CLOSING DENOMINATION DETAIL</div>
+ <div class="opening-closing-grid">
+   <div class="side-panel opening-side"><div class="side-title">OPENING</div><div class="side-grid">
+     ${single('CHIPS',BAL_CHIPS,r.openingChipsGhc,'GHC',true)}
+     ${single('CHIPS',BAL_CHIPS,r.openingChipsUsd,'USD')}
+     ${single('CASH',BAL_GHC_CASH,r.openingCashGhc,'GHC',true)}
+     ${single('CASH',BAL_USD_CASH,r.openingCashUsd,'USD')}
+   </div></div>
+   <div class="side-panel closing-side"><div class="side-title">CLOSING</div><div class="side-grid">
+     ${single('CHIPS',BAL_CHIPS,r.closingChipsGhc,'GHC',true)}
+     ${single('CHIPS',BAL_CHIPS,r.closingChipsUsd,'USD')}
+     ${single('CASH',BAL_GHC_CASH,r.closingCashGhc,'GHC',true)}
+     ${single('CASH',BAL_USD_CASH,r.closingCashUsd,'USD')}
+     ${single('CASH',BAL_EUR_CASH,r.closingCashEur,'EUR')}
+     ${single('CASH',BAL_GBP_CASH,r.closingCashGbp,'GBP')}
+   </div></div>
+ </div>
+ <div class="bottom-grid">
+   <div class="pblock"><h3>AUTOMATIC TRANSACTION TOTALS</h3><table><tr><th>ITEM</th><th>USD</th></tr>${autoRows.map(x=>`<tr><td>${x[0]}</td><td>USD ${money(x[1])}</td></tr>`).join('')}</table></div>
+   <div class="pblock"><h3>FLOAT MOVEMENT</h3><table><tr><th>ITEM</th><th>AMOUNT</th></tr><tr><td>Increase — Cash</td><td>${money(r.floatIncreaseCash)} ${r.floatIncreaseCashCurrency||'USD'}</td></tr><tr><td>Increase — Chips</td><td>${money(r.floatIncreaseChips)} ${r.floatIncreaseChipsCurrency||'USD'}</td></tr><tr><td>Decrease — Cash</td><td>${money(r.floatDecreaseCash)} ${r.floatDecreaseCashCurrency||'USD'}</td></tr><tr><td>Decrease — Chips</td><td>${money(r.floatDecreaseChips)} ${r.floatDecreaseChipsCurrency||'USD'}</td></tr></table></div>
+   <div class="pblock final-summary"><h3>FINAL BALANCE SUMMARY — USD</h3><table><tr><th>ITEM</th><th>AMOUNT</th></tr><tr><td>TOTAL OPENING</td><td>USD ${money(v.totalOpening)}</td></tr><tr><td>TOTAL CLOSING</td><td>USD ${money(v.totalClosing)}</td></tr><tr><td>BONUS</td><td>USD ${money(v.bonus)}</td></tr><tr><td>BALANCING</td><td>USD ${money(v.balancing)}</td></tr><tr class="result-row"><td>RESULT</td><td>USD ${money(v.result)}</td></tr></table></div>
+ </div></div>`;
+}
+function printBalance(){
+ const date=document.getElementById('balanceBizDate')?.value||balanceDefaultDate();
+ let liveRecord;
+ try{liveRecord=readBalanceForm();}catch(_){liveRecord=getBalanceRecord(date);}
+ let html='';
+ try{html=balancePrintHtml(date,liveRecord);}catch(err){console.error('Daily Balance HTML error',err);alert('Daily Balance print could not be prepared. Please refresh and try again.');return;}
+ const w=window.open('', '_blank', 'width=1200,height=850');
+ if(!w){alert('Please allow pop-ups for the Daily Balance print.');return;}
+ try{
+   w.document.open();
+   w.document.close();
+   w.document.title='Daily Balance';
+   const style=w.document.createElement('style');
+   style.textContent=`@page{size:A4 landscape;margin:4mm}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:6.5px;color:#18232c;zoom:.72}.print-wrap{width:100%;height:auto;overflow:visible}.print-title{margin-bottom:2px}.print-title h1{font-size:13px;margin:0 0 1px}.print-title div{font-size:7px;line-height:1.05}.section-label{font-weight:700;font-size:8px;margin:2px 0 1px;border-bottom:1px solid #333;padding-bottom:1px}.opening-closing-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:2px}.side-panel{border:1px solid #555;padding:2.2px;break-inside:avoid;page-break-inside:avoid;min-width:0}.side-title{font-size:9px;font-weight:900;text-align:center;border-bottom:1px solid #333;padding-bottom:1px;margin-bottom:1.5px}.side-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}.pblock{border:1px solid #777;padding:1.6px;break-inside:avoid;page-break-inside:avoid;min-width:0}.pblock h3{font-size:8px;margin:0 0 1px}.pblock table{width:100%;border-collapse:collapse;margin:0}.pblock th,.pblock td{border:1px solid #aaa;padding:.55px 1.2px;line-height:1;white-space:nowrap}.pblock th{font-weight:700}.pblock td:not(:first-child),.pblock th:not(:first-child){text-align:right}.pblock td:first-child,.pblock th:first-child{text-align:left}.pblock .total td{font-weight:700}.usdline{font-size:6.2px;margin-top:1px}.bottom-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:3px;margin-top:2.5px;break-inside:avoid;page-break-inside:avoid;break-before:auto;page-break-before:avoid}.bottom-grid .pblock{break-inside:avoid;page-break-inside:avoid}.final-summary .result-row td{font-size:13px;font-weight:900;border-top:2px solid #333;padding:3px 2px;line-height:1.15}.final-summary .result-row td:last-child{font-size:14px;font-weight:900}`;
+   w.document.head.appendChild(style);
+   w.document.body.innerHTML=html;
+   w.document.body.setAttribute('data-print-ready','1');
+   w.focus();
+   setTimeout(()=>{try{w.focus();w.print();}catch(e){console.error('Daily Balance print error',e);alert('The print window could not be opened. Please try again and allow pop-ups.');}},350);
+ }catch(err){console.error('Daily Balance print error',err);try{w.close();}catch(_){ }alert('Daily Balance print could not be prepared. Please try again.');}
+}
+applyClosedBusinessDayUI();
+
+
+function initClosedDayObserver(){if(window._closedDayObserver)return;const root=document.getElementById('content');if(!root)return;window._closedDayObserver=new MutationObserver(()=>{if(!window._closedDayApplying){window._closedDayApplying=true;setTimeout(()=>{window._closedDayApplying=false;applyClosedBusinessDayUI();},0);}});window._closedDayObserver.observe(root,{childList:true,subtree:true});}
+
+function show(k,insideCashier=false){
+if(!insideCashier && k!=="cashier" && !requirePermission(k))return;
+document.getElementById("title").textContent=insideCashier?"Cashier":(labels[k]||k);
+document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.textContent==="Cashier" && (insideCashier||k==="cashier")));
+let c=document.getElementById("content");
+if(k==="cashier"){showCashier();return;}if(k==="dashboard") c.innerHTML=`<div class="cardgrid">
+<div class="card"><div class="label">Customers</div><div class="value">${customers.length}</div></div>
+<div class="card"><div class="label">Transactions</div><div class="value">${tx.length}</div></div>
+<div class="card"><div class="label">Loans Outstanding</div><div class="value">$${loanOutstanding().toLocaleString()}</div></div>
+<div class="card"><div class="label">Rewards Recorded</div><div class="value">$${rewardTotal().toLocaleString()}</div></div></div>
+<div class="panel"><h2>System flow</h2><p>Login → Customer → Buy-In → CREDIT/Payment → Cash-Out → Result → Rewards → Statement</p>
+<table><tr><th>Control</th><th>Status</th></tr><tr><td>Role-based access</td><td><span class="pill">Configured</span></td></tr><tr><td>Unique customer IDs</td><td><span class="pill">Configured</span></td></tr><tr><td>Transaction audit fields</td><td><span class="pill">Prototype</span></td></tr><tr><td>Server backup</td><td><span class="pill">Production phase</span></td></tr></table></div>`;
+if(k==="customers") c.innerHTML=`<div class="panel"><h2>Customer Registration</h2>
+<div class="small">Reception registers the customer. Customer ID is generated automatically and remains the permanent casino reference. IDs are unique and never reused.</div>
+<div class="formgrid" style="margin-top:14px">
+<div class="field"><label>Full Name *</label><input id="cn" autocomplete="name"></div>
+<div class="field"><label>Telephone *</label><input id="cp" autocomplete="tel"></div>
+<div class="field"><label>Customer ID</label><input value="Auto-generated" disabled></div>
+<div class="field"><label>ID Type</label><select id="cit"><option>Ghana Card</option><option>Passport</option><option>Driver Licence</option><option>Other</option></select></div>
+<div class="field"><label>ID Number</label><input id="cin"></div>
+<div class="field"><label>Date of Birth</label><input id="cdob" type="date"></div>
+<div class="field"><label>Address</label><input id="caddr"></div>
+<div class="field"><label>Status</label><select id="cstatus"><option>Active</option><option>Suspended</option><option>Inactive</option></select></div>
+<div class="field"><label>Registration Date</label><input id="creg" type="date" value="${new Date().toISOString().slice(0,10)}" disabled></div>
+</div>
+<div class="actions"><button class="btn primary" onclick="addCustomer()">Register Customer</button><button class="btn muted" onclick="clearCustomerForm()">Clear</button></div></div>
+<div class="panel"><h2>Customer Database</h2>
+<div class="toolbar"><input id="customerSearch" placeholder="Search name, phone, ID or ID number" oninput="renderCustomerTable()"><span class="small" id="customerCount"></span></div>
+<div id="customerTable"></div></div>`; renderCustomerTable();
+if(k==="cashdesk") c.innerHTML=(insideCashier?"":cashierBar("buy"))+`<div class="panel"><h2>Cash Desk — Buy-In</h2>
+<div class="small">One entry per buy-in. The cashier selects the currency and enters the amount received. The exchange rate is controlled by Management and is locked for the cashier.</div>
+<div class="formgrid" style="margin-top:14px">
+<div class="field"><label>Customer *</label><select id="cust">${customers.filter(x=>(x.status||"Active")==="Active").map(x=>`<option value="${x.id}">${x.name} — ${x.id}</option>`).join("")}</select></div>
+<div class="field"><label>Time</label><input id="btime" type="time" value="${new Date().toTimeString().slice(0,5)}"></div>
+<div class="field"><label>Currency *</label><select id="buycurrency" onchange="updateBuyInRate()"><option value="GHS">GHS — Ghana Cedi</option><option value="USD">USD — US Dollar</option><option value="EUR">EUR — Euro</option><option value="GBP">GBP — British Pound</option></select></div>
+<div class="field"><label>Amount Received *</label><input id="buyamt" type="number" min="0" step="0.01" placeholder="Enter amount" oninput="calcBuyIn()"></div>
+<div class="field"><label>Manager Rate <span class="locktag">🔒 Read Only</span></label><input id="rate" class="locked" value="${getCurrencyRate("GHS").toFixed(2)}" disabled></div>
+<div class="field"><label>Payment Source *</label><select id="method"><option>Cash</option><option>MoMo - 171</option><option>MoMo - 477</option><option>Zenith Bank</option><option>Bank / Card</option><option>Customer Credit / Advance</option></select></div>
+<div class="field"><label>Cashier Name *</label><input id="bcashier" placeholder="Cashier who performed transaction"></div>
+<div class="field"><label>Reference / Note</label><input id="bref" placeholder="Optional reference"></div>
+</div>
+<div class="calcbox"><b>Manager USD Rate: GHS ${getManagerUsdRate().toFixed(2)} = USD 1.00 🔒</b><br><span id="conversionText">Enter an amount to calculate.</span><br><span>Casino Value in USD: <strong id="buyTotal">$0.00</strong></span><div class="hint">GHS uses the Manager USD rate (GHS per USD). EUR and GBP use direct Manager USD-per-currency rates. USD is 1:1. Rates are stored with each transaction.</div></div>
+<div id="creditBalanceText" class="calcbox"><b>Customer Credit / Advance: USD 0.00</b></div>
+<div class="actions"><button class="btn success" onclick="addBuyIn()">Issue Chips / Record Buy-In</button><button class="btn muted" onclick="clearBuyIn()">Clear</button></div></div>
+<div class="panel"><h2>Customer Buy-In Summary</h2>${customerBuyInSummary()}</div>
+<div class="panel"><h2>Recent Buy-In Transactions</h2>${txTable("BUY_IN")}</div>`; updateBuyInRate();
+if(k==="inout") c.innerHTML=(insideCashier?"":cashierBar("out"))+`<div class="panel"><h2>In & Out — Cash-Out</h2>
+<div class="small">One entry per cash-out. Select the currency and enter the amount paid to the customer. The applicable Manager rate is read-only.</div>
+<div class="formgrid" style="margin-top:14px">
+<div class="field"><label>Customer *</label><select id="cust">${customers.filter(x=>(x.status||"Active")==="Active").map(x=>`<option value="${x.id}">${x.name} — ${x.id}</option>`).join("")}</select></div>
+<div class="field"><label>Time</label><input id="outtime" type="time" value="${new Date().toTimeString().slice(0,5)}"></div>
+<div class="field"><label>Currency *</label><select id="outcurrency"><option value="GHS">GHS — Ghana Cedi</option><option value="USD">USD — US Dollar</option><option value="EUR">EUR — Euro</option><option value="GBP">GBP — British Pound</option></select></div>
+<div class="field"><label>Cash-Out Amount *</label><input id="outamt" type="number" min="0" step="0.01" placeholder="Enter amount"></div>
+<div class="field"><label>Manager Rate <span class="locktag">🔒 Read Only</span></label><input id="outrate" class="locked" disabled></div>
+<div class="field"><label>Payment Method *</label><select id="outmethod"><option>Cash</option><option>Bank / Card</option><option>MoMo - 171</option><option>MoMo - 477</option><option>Zenith Bank</option></select></div>
+<div class="field"><label>Cashier Name *</label><input id="outcashier" placeholder="Cashier who performed transaction"></div>
+<div class="field"><label>Reference / Note</label><input id="outref" placeholder="Optional reference"></div>
+</div>
+<div class="calcbox"><b>Casino Value in USD: <strong id="outTotal">$0.00</strong></b><div class="hint" id="outConversion">Enter an amount to calculate.</div></div>
+<div class="actions"><button class="btn primary" id="recordCashOutBtn">Record Cash-Out</button><button class="btn muted" id="clearCashOutBtn">Clear</button></div></div>
+<div class="panel"><h2>Customer In & Out Summary</h2>${customerInOutSummary()}</div>
+<div class="panel"><h2>Ledger</h2>${txTable()}</div>`; initCashOut();
+function initCashOut(){
+let cur=document.getElementById("outcurrency"),amt=document.getElementById("outamt"),rec=document.getElementById("recordCashOutBtn"),clr=document.getElementById("clearCashOutBtn");
+if(cur)cur.addEventListener("change",updateCashOutRate);
+if(amt)amt.addEventListener("input",calcCashOut);
+if(rec)rec.addEventListener("click",addCashOut);
+if(clr)clr.addEventListener("click",clearCashOut);
+updateCashOutRate();
+}
+function updateCashOutRate(){
+let cur=document.getElementById("outcurrency")?.value||"GHS",rate=getCurrencyRate(cur),e=document.getElementById("outrate");
+if(e)e.value=rate.toFixed(2);
+calcCashOut();
+}
+function calcCashOut(){
+let cur=document.getElementById("outcurrency")?.value||"GHS",amt=num("outamt"),usd=getUsdValue(cur,amt),rate=getCurrencyRate(cur),usdRate=getManagerUsdRate();
+let e=document.getElementById("outTotal"),t=document.getElementById("outConversion");
+if(e)e.textContent="USD "+usd.toFixed(2);
+if(t){
+if(amt<=0)t.textContent="Enter an amount to calculate.";
+else if(cur==="USD")t.textContent="USD "+amt.toFixed(2)+" = USD "+usd.toFixed(2);
+else if(cur==="GHS")t.textContent="GHS "+amt.toFixed(2)+" ÷ GHS "+usdRate.toFixed(2)+" per USD = USD "+usd.toFixed(2);
+else t.textContent=cur+" "+amt.toFixed(2)+" × USD "+rate.toFixed(2)+" per "+cur+" = USD "+usd.toFixed(2);
+}
+}
+function clearCashOut(){
+["outamt","outref","outcashier"].forEach(id=>{let e=document.getElementById(id);if(e)e.value=""});
+let c=document.getElementById("outcurrency");if(c)c.value="GHS";
+let m=document.getElementById("outmethod");if(m)m.value="Cash";
+updateCashOutRate();
+}
+function addCashOut(){
+let cid=document.getElementById("cust")?.value,cur=document.getElementById("outcurrency")?.value||"GHS",
+amount=num("outamt"),rate=getCurrencyRate(cur),usd=getUsdValue(cur,amount),method=document.getElementById("outmethod")?.value,
+ref=document.getElementById("outref")?.value.trim()||"", cashier=document.getElementById("outcashier")?.value.trim()||"";
+if(!cid)return alert("Select a customer.");
+if(!cashier)return alert("Enter the Cashier Name.");
+if(amount<=0)return alert("Enter a cash-out amount greater than zero.");
+if(rate<=0)return alert("No manager rate is configured for "+cur+".");
+if(getManagerUsdRate()<=0)return alert("No manager USD rate is configured.");
+let c=customers.find(x=>x.id===cid);
+if(!confirmTxn("CONFIRM CASH-OUT",`Customer: ${c?.name||cid} (${cid})\nTransaction: CASH-OUT\nAmount: ${cur} ${amount.toFixed(2)}\nUSD Casino Value: USD ${usd.toFixed(2)}\nPayment Method: ${method}\nCashier: ${cashier}`))return;
+tx.push({id:"TX-"+Date.now(),date:new Date().toISOString(),customerId:cid,customerName:c?.name||cid,type:"CASH_OUT",amount,currency:cur,rate,usdRate:getManagerUsdRate(),usd,method,staff:cashier,reference:ref,businessDate:businessDateForNow(),time:document.getElementById("outtime")?.value||""});
+save();
+alert("Cash-out recorded for "+(c?.name||cid)+" — "+cur+" "+amount.toFixed(2)+" = USD "+usd.toFixed(2)+"\nCashier: "+cashier);
+show("cashier"); showCashierTab("out");
+}
+function customerInOutSummary(){
+const currentDate=currentCashierHistoryDate();
+let rows=customers.map(c=>{
+let ins=tx.filter(x=>x.type==="BUY_IN"&&x.customerId===c.id&&txBusinessDate(x)===currentDate),outs=tx.filter(x=>x.type==="CASH_OUT"&&x.customerId===c.id&&txBusinessDate(x)===currentDate),loans=tx.filter(x=>x.type==="LOAN"&&x.action==="LOAN_PAID"&&x.customerId===c.id&&txBusinessDate(x)===currentDate);
+let buyIn=ins.reduce((s,x)=>s+Number(x.usd||0),0),loanIn=loans.reduce((s,x)=>s+Number(x.amount||0),0),repayments=tx.filter(x=>x.type==="LOAN"&&x.action==="LOAN_REPAID"&&x.customerId===c.id),loanRepaid=repayments.reduce((s,x)=>s+Number(x.amount||0),0),tin=buyIn+loanIn,cashOut=outs.reduce((s,x)=>s+Number(x.usd||0),0),tout=cashOut+loanRepaid;
+return {c,ins,outs,loans,repayments,buyIn,loanIn,loanRepaid,tin,tout,balance:tout-tin};
+}).filter(x=>x.ins.length||x.outs.length||x.loans.length);
+if(!rows.length)return '<div class="small">No customer money transactions recorded yet.</div>';
+return `<table><tr><th>Customer</th><th>Buy-Ins</th><th>CREDIT</th><th>TOTAL IN (USD)</th><th>Cash-Outs</th><th>DEPOSIT</th><th>TOTAL OUT (USD)</th><th>Outstanding Loan</th><th>RESULT (OUT − IN)</th></tr>${rows.map(x=>`<tr><td><b>${x.c.name}</b> (${x.c.id})</td><td>${x.ins.length}</td><td>$${x.loanIn.toFixed(2)}</td><td><b>$${x.tin.toFixed(2)}</b></td><td>${x.outs.length}</td><td>$${x.loanRepaid.toFixed(2)}</td><td><b>$${x.tout.toFixed(2)}</b></td><td><b>$${Math.max(0,x.loanIn-x.loanRepaid).toFixed(2)}</b></td><td><b>$${x.balance.toFixed(2)}</b></td></tr>`).join("")}</table>`;
+}
+if(k==="loans") c.innerHTML=`<div class="panel"><h2>Pit Manager — CREDIT</h2>
+<div class="small">The Pit Manager approves credit for the customer. Approval does not mean cash has been released. Cashier must separately confirm Paid / Given.</div>
+<div class="formgrid" style="margin-top:14px">
+<div class="field"><label>Customer *</label><select id="loancust">${customers.filter(x=>(x.status||"Active")==="Active").map(x=>`<option value="${x.id}">${x.name} — ${x.id}</option>`).join("")}</select></div>
+<div class="field"><label>Date / Time</label><input id="loantime" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></div>
+<div class="field"><label>Approved Loan Amount (USD) *</label><input id="loanamount" type="number" min="0.01" step="0.01" placeholder="Enter amount"></div>
+<div class="field"><label>Pit Manager Name *</label><input id="loanmanager" placeholder="Manager who approved loan"></div>
+<div class="field"><label>Reference / Note *</label><input id="loanref" placeholder="Account / approval remark" required></div>
+</div>
+<div class="actions"><button class="btn warn" type="button" onclick="approveLoan()">Approve Loan</button><button class="btn muted" type="button" onclick="clearLoanForm()">Clear</button></div></div>
+<div class="panel"><h2>Pit Manager — DEPOSIT</h2>
+<div class="small">Pit Manager collects repayment from the customer. This only submits the collected cash to the Cashier for receipt; it does not increase TOTAL IN or reduce the loan until Cashier clicks Receive.</div>
+<div class="formgrid" style="margin-top:14px">
+<div class="field"><label>Customer *</label><select id="repaycust" onchange="updateRepaymentBalance()">${customers.filter(x=>(x.status||"Active")==="Active").map(x=>`<option value="${x.id}">${x.name} — ${x.id}</option>`).join("")}</select></div>
+<div class="field"><label>Date / Time</label><input id="repaytime" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}"></div>
+<div class="field"><label>Repayment Amount (USD) *</label><input id="repayamount" type="number" min="0.01" step="0.01" placeholder="Enter amount"></div>
+<div class="field"><label>Pit Manager Name *</label><input id="repaymanager" placeholder="Manager who collected repayment"></div>
+<div class="field"><label>Reference / Note *</label><input id="repayref" placeholder="Account / repayment remark" required></div>
+</div>
+<div id="repayBalanceText" class="calcbox" style="margin-top:14px">Select a customer.</div>
+<div class="actions"><button class="btn primary" type="button" onclick="collectLoanRepayment()">Collect & Send to Cashier</button><button class="btn muted" type="button" onclick="clearRepaymentForm()">Clear</button></div></div>
+<div class="panel"><h2>Pending Loans — Waiting for Cashier</h2>${pendingLoanTable()}</div>
+<div class="panel"><h2>Pending Repayments — Waiting for Cashier</h2>${pendingRepaymentTable()}</div>
+<div class="panel"><h2>Customer Credit Summary</h2>${loanSummaryTable()}</div>
+<div class="panel"><h2>Loan / Credit Ledger</h2>${loanLedgerTable()}</div>`; updateLoanBalance(); updateRepaymentBalance();
+
+if(k==="loans"){
+  setTimeout(()=>{const isPit=currentUser?.role==="Pit Manager"||currentUser?.role==="Manager"; const isCash=currentUser?.role==="Cashier"||currentUser?.role==="Manager"; const panels=[...c.querySelectorAll('.panel')]; panels.forEach((p,i)=>{if(i===0&&!isPit)p.style.display='none'; if(i===1&&!isPit)p.style.display='none'; if((i===2||i===3)&&!isCash&&currentUser?.role!=="Pit Manager"&&currentUser?.role!=="Manager")p.style.display='none';});},0);
+}
+if(k==="rewards") {
+  const isApprover=currentUser?.role==="Pit Manager"||currentUser?.role==="Manager";
+  const isCashier=currentUser?.role==="Cashier"||currentUser?.role==="Manager";
+  c.innerHTML=`
+  <div class="panel"><h2>Rewards</h2><div class="small">Rewards are separate from casino RESULT / TOTAL IN / TOTAL OUT. Pit Manager approves first; Cashier then clicks Pay / Give. Each approval and payment remains in the audit history.</div></div>
+  ${isApprover?`<div class="panel"><h2>Pit Manager — Approve Reward</h2>
+  <div class="formgrid"><div class="field"><label>Customer *</label><select id="rewardCust" onchange="updateRewardCustomerPreview()">${customers.slice().reverse().map(x=>`<option value="${x.id}">${x.name} — ${x.id}</option>`).join("")}</select><div id="rewardCustomerPreview" class="hint"></div></div>
+  <div class="field"><label>Reward Type *</label><select id="rewardType" onchange="updateRewardUnit()"><option value="CASHBACK">Cashback</option><option value="LUCKY_CHIPS">Lucky Chips</option><option value="DAILY_DRAW">Daily Draw / Raffle</option></select></div>
+  <div class="field"><label id="rewardAmountLabel">Amount (USD) *</label><input id="rewardAmount" type="number" min="0.01" step="0.01"></div>
+  <div class="field"><label>Pit Manager Name *</label><input id="rewardApprover" value="${currentUser?.name||""}" placeholder="Approver name"></div>
+  <div class="field"><label>Reference / Remark</label><input id="rewardRef" placeholder="Optional"></div></div>
+  <div class="actions"><button class="btn primary" type="button" onclick="approveReward()">Approve Reward</button><button class="btn muted" type="button" onclick="clearRewardForm()">Clear</button></div></div>`:""}
+  <div class="panel"><h2>Rewards History</h2><div class="small">History is separated by reward type. A single approved reward is stored as one record and changes to Paid / Given when Cashier completes it.</div><div id="rewardHistoryBox"></div></div>`;
+  renderRewardsPage();
+}
+if(k==="reports"){ renderMainReports(); }if(k==="totaltable"){ renderTotalTableSummary(); }if(k==="tablefillcredit"){ renderTableFillCreditRecord(); }if(k==="customerwise"){ renderCustomerWisePage(); }if(k==="tableopening"){ renderTableOpening(); }
+if(k==="balance"){ renderBalancePage(); }
+if(k==="settings") c.innerHTML=`<div class="panel"><h2>Management Settings — Currency Rates</h2>
+<div class="small">Management controls the casino exchange rates. Cashiers can only view the applicable rate on Cash Desk.</div>
+<div class="formgrid" style="margin-top:14px">
+<div class="field"><label>USD Rate — GHS per USD</label><input id="rateUSD" type="number" min="0.0001" step="0.01" value="${getManagerUsdRate()}"></div>
+<div class="field"><label>EUR Rate — USD per EUR</label><input id="rateEUR" type="number" min="0.0001" step="0.01" value="${getCurrencyRate("EUR")}"></div>
+<div class="field"><label>GBP Rate — USD per GBP</label><input id="rateGBP" type="number" min="0.0001" step="0.01" value="${getCurrencyRate("GBP")}"></div>
+</div>
+<div class="actions"><button class="btn primary" onclick="saveCurrencyRates()">Save Currency Rates</button><button class="btn muted" onclick="manageUsers()">Manage User Accounts</button></div>
+<div class="calcbox"><b>Current Rates</b><br>USD: GHS ${getManagerUsdRate().toFixed(2)} &nbsp; | &nbsp; EUR: USD ${getCurrencyRate("EUR").toFixed(2)} &nbsp; | &nbsp; GBP: USD ${getCurrencyRate("GBP").toFixed(2)}<div class="hint">These rates are manager-controlled. Previous transactions keep their original rate.</div></div>
+</div>`;
+}
+function saveCurrencyRates(){
+ let u=Number(document.getElementById("rateUSD")?.value||0),e=Number(document.getElementById("rateEUR")?.value||0),g=Number(document.getElementById("rateGBP")?.value||0);
+ if(!(u>0&&e>0&&g>0)) return alert("Please enter valid positive currency rates.");
+ let old=getCurrencyRates(), foreign=getForeignUsdRates(), history=JSON.parse(localStorage.getItem("casinoRateHistory")||"[]");
+ history.push({savedAt:new Date().toISOString(),user:currentUser?.name||currentUser?.username||"Manager",USD:Number(old.USD)||0,EUR:Number(foreign.EUR)||0,GBP:Number(foreign.GBP)||0});
+ localStorage.setItem("casinoRateHistory",JSON.stringify(history));
+ localStorage.setItem("casinoCurrencyRates",JSON.stringify({USD:u,EUR:Number(old.EUR)||14,GBP:Number(old.GBP)||16}));
+ localStorage.setItem("casinoForeignUsdRates",JSON.stringify({EUR:e,GBP:g}));
+ alert("Currency rates saved.");
+show("settings");
+}
+function addCustomer(){
+let n=document.getElementById("cn").value.trim(), p=document.getElementById("cp").value.trim(),
+it=document.getElementById("cit").value, inn=document.getElementById("cin").value.trim(),
+dob=document.getElementById("cdob").value, addr=document.getElementById("caddr").value.trim(),
+status=document.getElementById("cstatus").value, reg=document.getElementById("creg").value;
+if(!n)return alert("Enter customer full name");
+if(!p)return alert("Enter customer telephone");
+if(inn && customers.some(x=>String(x.idNumber||"").toLowerCase()===inn.toLowerCase()))return alert("That ID number is already registered.");
+let max=customers.reduce((m,x)=>Math.max(m,Number(String(x.id||"").replace(/\D/g,""))||0),0);
+let id="";
+do { max++; id="CUS-"+String(max).padStart(6,"0"); } while(customers.some(x=>x.id===id));
+customers.push({id,name:n,phone:p,idType:it,idNumber:inn,dob,address:addr,status,registrationDate:reg});
+save(); alert("Customer registered: "+id); show("customers");
+}
+function clearCustomerForm(){
+["cn","cp","cin","cdob","caddr"].forEach(id=>{let e=document.getElementById(id);if(e)e.value=""});
+document.getElementById("cstatus").value="Active";
+document.getElementById("cit").value="Ghana Card";
+}
+function renderCustomerTable(){
+let q=(document.getElementById("customerSearch")?.value||"").toLowerCase().trim();
+let a=customers.filter(x=>[x.id,x.name,x.phone,x.idNumber].join(" ").toLowerCase().includes(q));
+let count=document.getElementById("customerCount"); if(count)count.textContent=a.length+" customer(s)";
+let box=document.getElementById("customerTable"); if(!box)return;
+box.innerHTML=`<table><tr><th>ID</th><th>Full Name</th><th>Telephone</th><th>ID Type</th><th>ID Number</th><th>Status</th><th>Registered</th></tr>${a.map(x=>`<tr><td><b>${x.id}</b></td><td>${x.name}</td><td>${x.phone}</td><td>${x.idType||"-"}</td><td>${x.idNumber||"-"}</td><td><span class="pill">${x.status||"Active"}</span></td><td>${x.registrationDate||"-"}</td></tr>`).join("")}</table>`;
+}
+function num(id){return Number(document.getElementById(id)?.value||0)||0}
+function getCurrencyRates(){
+let r=JSON.parse(localStorage.getItem("casinoCurrencyRates")||"null");
+if(!r || Number(r.USD)<=0){
+ r={USD:12,EUR:14,GBP:16};
+ localStorage.setItem("casinoCurrencyRates",JSON.stringify(r));
+}
+return r;
+}
+function getForeignUsdRates(){
+ let r=JSON.parse(localStorage.getItem("casinoForeignUsdRates")||"null");
+ if(!r || Number(r.EUR)<=0 || Number(r.GBP)<=0){
+   r={EUR:1.10,GBP:1.20};
+   localStorage.setItem("casinoForeignUsdRates",JSON.stringify(r));
+ }
+ return r;
+}
+function getCurrencyRate(currency){
+ let rates=getCurrencyRates(), foreign=getForeignUsdRates();
+ if(currency==="GHS") return Number(rates.USD);
+ if(currency==="USD") return 1;
+ if(currency==="EUR") return Number(foreign.EUR)||0;
+ if(currency==="GBP") return Number(foreign.GBP)||0;
+ return 0;
+}
+function getManagerUsdRate(){ return Number(getCurrencyRates().USD)||0; }
+function getUsdValue(currency,amount){
+ let rates=getCurrencyRates(), foreign=getForeignUsdRates(), a=Number(amount)||0;
+ if(currency==="USD") return a;
+ if(currency==="GHS") return Number(rates.USD)>0 ? a/Number(rates.USD) : 0;
+ if(currency==="EUR") return a*(Number(foreign.EUR)||0);
+ if(currency==="GBP") return a*(Number(foreign.GBP)||0);
+ return 0;
+}
+function updateBuyInRate(){
+let cur=document.getElementById("buycurrency")?.value||"GHS", rate=getCurrencyRate(cur), e=document.getElementById("rate");
+if(e)e.value=rate.toFixed(2);
+calcBuyIn();
+}
+function calcBuyIn(){
+let cur=document.getElementById("buycurrency")?.value||"GHS", amt=num("buyamt"), rate=getCurrencyRate(cur), usd=getUsdValue(cur,amt), usdRate=getManagerUsdRate(), cid=document.getElementById("cust")?.value, e=document.getElementById("buyTotal"),t=document.getElementById("conversionText"),cb=document.getElementById("creditBalanceText");
+if(e)e.textContent="$"+usd.toFixed(2);
+if(t)t.textContent=(cur==="USD"?"USD "+amt.toFixed(2)+" × 1.00":cur==="GHS"?"GHS "+amt.toFixed(2)+" ÷ GHS "+usdRate.toFixed(2)+" per USD":cur+" "+amt.toFixed(2)+" × USD "+rate.toFixed(2)+" per "+cur);
+if(cb)cb.innerHTML='<b>Customer Credit / Advance: USD '+customerCreditBalance(cid).toFixed(2)+'</b><div class="hint">Customer Credit / Advance is money already held by the casino for the customer’s future use.</div>';
+}
+function clearBuyIn(){
+["buyamt","bref","bcashier"].forEach(id=>{let e=document.getElementById(id);if(e)e.value=""});
+let c=document.getElementById("buycurrency");if(c)c.value="GHS";
+let m=document.getElementById("method");if(m)m.value="Cash";
+updateBuyInRate();
+}
+function confirmTxn(title, details){
+  return window.confirm(title+"\n\n"+details+"\n\nPlease confirm this transaction is correct.");
+}
+function cleanOperator(v, fallback){ return (v||fallback||"").trim(); }
+function customerCreditBalance(cid){
+if(!cid)return 0;
+const generated=tx.filter(x=>x.customerId===cid&&x.type==="LOAN"&&x.action==="LOAN_REPAID").reduce((s,x)=>s+Number(x.advanceGenerated||0),0);
+const used=tx.filter(x=>x.customerId===cid&&x.type==="BUY_IN"&&Number(x.creditUsed||0)>0).reduce((s,x)=>s+Number(x.creditUsed||0),0);
+return Math.max(0,generated-used);
+}
+function addBuyIn(){
+let cid=document.getElementById("cust")?.value, cur=document.getElementById("buycurrency")?.value||"GHS", amount=num("buyamt"), rate=getCurrencyRate(cur), usdRate=getManagerUsdRate(), method=document.getElementById("method")?.value, ref=document.getElementById("bref")?.value.trim()||"", cashier=document.getElementById("bcashier")?.value.trim()||"";
+if(!cid)return alert("Register a customer before recording a buy-in.");
+if(!cashier)return alert("Enter the Cashier Name.");
+if(amount<=0)return alert("Enter a buy-in amount greater than zero.");
+if(rate<=0)return alert("No manager rate is configured for "+cur+".");
+if(usdRate<=0)return alert("No manager USD rate is configured.");
+let usd=getUsdValue(cur,amount), c=customers.find(x=>x.id===cid), creditBalance=customerCreditBalance(cid);
+if(method==="Customer Credit / Advance"){
+ if(cur!=="USD")return alert("Customer Credit / Advance must be used in USD.");
+ if(usd>creditBalance+0.000001)return alert(`Customer Credit is only USD ${creditBalance.toFixed(2)}. Enter an amount within the available credit.`);
+}
+if(!confirmTxn("CONFIRM BUY-IN",`Customer: ${c?.name||cid} (${cid})\nTransaction: BUY-IN\nAmount: ${cur} ${amount.toFixed(2)}\nUSD Casino Value: USD ${usd.toFixed(2)}\nPayment Source: ${method}\nCashier: ${cashier}`))return;
+tx.push({id:"TX-"+Date.now(),date:new Date().toISOString(),customerId:cid,customerName:c?.name||cid,type:"BUY_IN",amount,currency:cur,rate,usdRate,usd,method,staff:cashier,reference:ref,businessDate:businessDateForNow(),time:document.getElementById("btime")?.value||"",creditUsed:method==="Customer Credit / Advance"?usd:0});
+save(); alert("Buy-in recorded for "+(c?.name||cid)+" — "+cur+" "+amount.toFixed(2)+" = USD "+usd.toFixed(2)+"\nCashier: "+cashier); show("cashier");
+}
+function customerBuyInSummary(){
+const currentDate=currentCashierHistoryDate();
+let rows=customers.map(c=>{
+let buys=tx.filter(x=>x.type==="BUY_IN"&&x.customerId===c.id&&txBusinessDate(x)===currentDate), totalUSD=buys.reduce((s,x)=>s+Number(x.usd||0),0), totalGHS=buys.reduce((s,x)=>s+Number(x.amountGHS||x.amount||0),0);
+return {c,buys,totalUSD,totalGHS};
+}).filter(x=>x.buys.length);
+if(!rows.length)return '<div class="small">No buy-ins recorded yet.</div>';
+return `<table><tr><th>Customer ID</th><th>Customer</th><th>Buy-Ins</th><th>Native Amounts</th><th>TOTAL IN (USD)</th></tr>${rows.map(x=>`<tr><td><b>${x.c.id}</b></td><td>${x.c.name}</td><td>${x.buys.length}</td><td>${x.buys.map(b=>(b.currency||"USD")+" "+Number(b.amount||0).toFixed(2)).join(" + ")}</td><td><b>$${x.totalUSD.toFixed(2)}</b></td></tr>`).join("")}</table>`;
+}
+function addTx(type){if(!guardBusinessDateOpen(businessDateForNow()))return alert("This Business Date is closed. Only Manager can make corrections.");let cid=document.getElementById("cust").value, amt=Number(document.getElementById("amt").value||0);let extra={};if(type==="BUY_IN")extra={method:method.value,currency:cur.value,rate:Number(rate.value||1),usd:amt/Number(rate.value||1)};if(type==="LOAN")extra.action=document.getElementById("loanact").value;if(type==="REWARD")extra.rewardType=document.getElementById("rtype").value;tx.push({id:"TX-"+Date.now(),date:new Date().toISOString(),customerId:cid,type,amount:amt,...extra,staff:"Prototype User"});save();show(type==="BUY_IN"?"cashdesk":type==="LOAN"?"loans":type==="REWARD"?"rewards":"inout")}
+function txBusinessDate(x){
+ const bd=String(x?.businessDate||'').trim().slice(0,10);
+ if(bd)return bd;
+ const raw=x?.date||x?.createdAt||x?.timestamp;
+ if(!raw)return '';
+ const d=new Date(raw);
+ if(Number.isNaN(d.getTime()))return '';
+ if(d.getHours()<18)d.setDate(d.getDate()-1);
+ return d.toISOString().slice(0,10);
+}
+function currentCashierHistoryDate(){return businessDateForNow();}
+function txTable(filter){let currentDate=currentCashierHistoryDate();let a=tx.filter(x=>(!filter||x.type===filter)&&txBusinessDate(x)===currentDate).slice().reverse();return `<table><tr><th>Date</th><th>Customer</th><th>Type</th><th>Amount Received</th><th>Casino Value</th><th>Payment / Currency</th><th>Rate Used</th><th>Staff</th></tr>${a.map(x=>{let c=customers.find(q=>q.id===x.customerId)||{},cur=x.currency||"USD",native=Number(x.amount||0),usd=Number(x.usd||0),rate=Number(x.rate||0);let payment=x.method||x.action||x.rewardType||"";let amountText=cur==="USD"?"USD "+native.toFixed(2):cur+" "+native.toFixed(2);let rateText=cur==="USD"?"1.00":rate.toFixed(2);return `<tr><td>${new Date(x.date).toLocaleString()}</td><td>${c.name||x.customerId}</td><td>${x.type}</td><td><b>${amountText}</b></td><td><b>USD ${usd.toFixed(2)}</b></td><td>${payment} / ${cur}</td><td>${rateText}</td><td>${x.staff||""}</td></tr>`}).join("")}</table>`}
+
+function getCustomerLoanBalance(cid){
+let issued=0,repaid=0;
+tx.filter(x=>x.customerId===cid).forEach(x=>{
+  if(x.type==="LOAN"&&x.action==="LOAN_PAID") issued+=Number(x.amount||0);
+  if(x.type==="LOAN"&&x.action==="LOAN_REPAID") repaid+=Number(x.amount||0);
+  // Keep compatibility with the old prototype's loan records.
+  if(x.type==="LOAN"&&x.action==="Loan Approved") issued+=Number(x.amount||0);
+  if(x.type==="LOAN"&&x.action==="Loan Return Accepted") repaid+=Number(x.amount||0);
+});
+return {issued,repaid,balance:Math.max(0,issued-repaid)};
+}
+function loanOutstanding(){
+return customers.reduce((s,c)=>s+getCustomerLoanBalance(c.id).balance,0);
+}
+function pendingLoans(){
+return tx.filter(x=>x.type==="LOAN"&&x.action==="LOAN_APPROVED"&&x.status==="PENDING_CASHIER");
+}
+function pendingLoanTable(cashier=false){
+let rows=pendingLoans();
+if(!rows.length)return '<div class="small">No loans are waiting for Cashier confirmation.</div>';
+return `<table><tr><th>Date</th><th>Customer</th><th>Approved Amount</th><th>Status</th><th>Approved By</th>${cashier?'<th>Cashier Action</th>':''}</tr>${rows.map(x=>{
+let c=customers.find(q=>q.id===x.customerId)||{};
+return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td><b>USD ${Number(x.amount||0).toFixed(2)}</b></td><td><span class="pill">Pending Cashier</span></td><td>${x.approvedBy||"Pit Manager"}</td>${cashier?`<td><button class="btn success" type="button" onclick="markLoanPaid('${x.id}')">Paid / Given</button></td>`:''}</tr>`;
+}).join("")}</table>`;
+}
+function loanSummaryTable(){
+ const currentDate=currentCashierHistoryDate();
+ let rows=customers.map(c=>{const rs=tx.filter(x=>x.customerId===c.id&&x.type==="LOAN"&&txBusinessDate(x)===currentDate);const issued=rs.filter(x=>x.action==="LOAN_PAID"||x.action==="LOAN_GIVEN"||x.status==="PAID_GIVEN").reduce((s,x)=>s+Number(x.amount||0),0);const repaid=rs.filter(x=>x.action==="LOAN_REPAID"||x.status==="RECEIVED").reduce((s,x)=>s+Number(x.amount||0),0);return {c,b:{issued,repaid,balance:Math.max(0,issued-repaid)}};}).filter(r=>r.b.issued||r.b.repaid);
+if(!rows.length)return '<div class="small">No paid loan / credit transactions recorded yet.</div>';
+return `<table><tr><th>Customer</th><th>CREDIT</th><th>DEPOSIT</th><th>Outstanding Loan</th><th>Customer Credit / Advance</th></tr>${rows.map(r=>`<tr><td><b>${r.c.name}</b><br><span class="small">${r.c.id}</span></td><td>USD ${r.b.issued.toFixed(2)}</td><td>USD ${r.b.repaid.toFixed(2)}</td><td><b>USD ${r.b.balance.toFixed(2)}</b></td><td><b>USD ${customerCreditBalance(r.c.id).toFixed(2)}</b></td></tr>`).join("")}</table>`;
+}
+function loanLedgerTable(){
+ const currentDate=currentCashierHistoryDate();
+let rows=tx.filter(x=>x.type==="LOAN"&&txBusinessDate(x)===currentDate).slice().reverse();
+if(!rows.length)return '<div class="small">No loan / credit transactions recorded yet.</div>';
+return `<table><tr><th>Date</th><th>Customer</th><th>Action</th><th>Amount (USD)</th><th>Status</th><th>Reference</th><th>Staff</th></tr>${rows.map(x=>{
+let c=customers.find(q=>q.id===x.customerId)||{};
+let status=x.status||"Completed";
+return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td>${x.action||""}</td><td><b>USD ${Number(x.amount||0).toFixed(2)}</b></td><td>${status}</td><td>${x.reference||""}</td><td>${x.staff||x.approvedBy||""}</td></tr>`;
+}).join("")}</table>`;
+}
+function updateLoanBalance(){
+let cid=document.getElementById("loancust")?.value, e=document.getElementById("loanBalanceText");
+if(!e)return;
+if(!cid){e.textContent="Select a customer.";return;}
+let b=getCustomerLoanBalance(cid);
+e.innerHTML=`Credit Paid / Given: <b>USD ${b.issued.toFixed(2)}</b> &nbsp; | &nbsp; Repaid: <b>USD ${b.repaid.toFixed(2)}</b> &nbsp; | &nbsp; Outstanding: <b>USD ${b.balance.toFixed(2)}</b>`;
+}
+function clearLoanForm(){
+["loanamount","loanref","loanmanager"].forEach(id=>{let e=document.getElementById(id);if(e)e.value=""});
+updateLoanBalance();
+}
+function approveLoan(){if(!guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
+let cid=document.getElementById("loancust")?.value;
+let amount=Number(document.getElementById("loanamount")?.value||0);
+let reference=(document.getElementById("loanref")?.value||"").trim();
+let manager=(document.getElementById("loanmanager")?.value||"").trim();
+if(!cid)return alert("Select a customer.");
+if(!manager)return alert("Enter the Pit Manager Name.");
+if(!reference)return alert("Enter the Reference / Note.");
+if(amount<=0)return alert("Enter an approved loan amount greater than zero.");
+let c=customers.find(x=>x.id===cid);
+if(!confirmTxn("CONFIRM LOAN APPROVAL",`Customer: ${c?.name||cid} (${cid})\nLoan Amount: USD ${amount.toFixed(2)}\nApproved By: Pit Manager — ${manager}\nRemark: ${reference||"-"}`))return;
+tx.push({id:"TX-"+Date.now(),date:new Date().toISOString(),customerId:cid,type:"LOAN",amount,action:"LOAN_APPROVED",status:"PENDING_CASHIER",reference,approvedBy:manager,businessDate:businessDateForNow()});
+save(); show("loans"); alert(`Loan approved for ${c?.name||cid}. It is now waiting for Cashier Paid / Given confirmation.`);
+}
+function markLoanPaid(approvalId){if(!guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
+let approval=tx.find(x=>x.id===approvalId&&x.type==="LOAN"&&x.action==="LOAN_APPROVED"&&x.status==="PENDING_CASHIER");
+if(!approval)return alert("This loan approval is no longer pending.");
+let cashier=window.prompt("Enter Cashier Name who is releasing the loan:","");
+if(!cashier||!cashier.trim())return;
+cashier=cashier.trim();
+let c=customers.find(x=>x.id===approval.customerId);
+if(!confirmTxn("CONFIRM CREDIT",`Customer: ${c?.name||approval.customerId} (${approval.customerId})\nAmount: USD ${Number(approval.amount||0).toFixed(2)}\nApproved By: Pit Manager — ${approval.approvedBy||""}\nPaid / Given By: Cashier — ${cashier}\nRemark: ${approval.reference||"-"}`))return;
+let now=new Date().toISOString(); approval.status="CASHIER_PAID"; approval.paidAt=now; approval.paidBy=cashier;
+tx.push({id:"TX-"+Date.now(),date:now,customerId:approval.customerId,type:"LOAN",amount:Number(approval.amount||0),action:"LOAN_PAID",status:"PAID_GIVEN",reference:approval.reference||"",approvedLoanId:approval.id,approvedBy:approval.approvedBy||"",staff:cashier,paidBy:cashier,businessDate:businessDateForNow()});
+save(); show("cashier"); alert("Loan marked Paid / Given. Cashier: "+cashier);
+}
+function updateRepaymentBalance(){
+let cid=document.getElementById("repaycust")?.value,e=document.getElementById("repayBalanceText");
+if(!e)return;
+let b=cid?getCustomerLoanBalance(cid):{issued:0,repaid:0,balance:0};
+e.innerHTML=`Loan Given: <b>USD ${b.issued.toFixed(2)}</b> &nbsp; | &nbsp; Repaid: <b>USD ${b.repaid.toFixed(2)}</b> &nbsp; | &nbsp; Outstanding: <b>USD ${b.balance.toFixed(2)}</b>`;
+}
+function clearRepaymentForm(){
+["repayamount","repayref","repaymanager"].forEach(id=>{let e=document.getElementById(id);if(e)e.value=""});
+updateRepaymentBalance();
+}
+function collectLoanRepayment(){if(!guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
+let cid=document.getElementById("repaycust")?.value; let amount=Number(document.getElementById("repayamount")?.value||0);
+let reference=(document.getElementById("repayref")?.value||"").trim(); let manager=(document.getElementById("repaymanager")?.value||"").trim();
+if(!cid)return alert("Select a customer."); if(!manager)return alert("Enter the Pit Manager Name.");
+let b=getCustomerLoanBalance(cid); if(b.balance<=0)return alert("This customer has no outstanding loan.");
+if(!reference)return alert("Enter the Reference / Note.");
+if(amount<=0)return alert("Enter a repayment amount greater than zero.");
+let c=customers.find(x=>x.id===cid);
+if(!confirmTxn("CONFIRM LOAN REPAYMENT COLLECTION",`Customer: ${c?.name||cid} (${cid})\nAmount Collected: USD ${amount.toFixed(2)}\nCollected By: Pit Manager — ${manager}\nRemark: ${reference||"-"}`))return;
+let now=new Date().toISOString(); tx.push({id:"TX-"+Date.now(),date:now,customerId:cid,type:"LOAN",amount,action:"LOAN_REPAYMENT_PENDING",status:"PENDING_CASHIER",reference,collectedBy:manager,businessDate:businessDateForNow(),collectionTime:document.getElementById("repaytime")?.value||""});
+save(); show("loans"); alert(`Loan repayment of USD ${amount.toFixed(2)} collected from ${c?.name||cid}. It is now waiting for Cashier Receive.`);
+}
+function receiveLoanRepayment(repaymentId){if(!guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
+let pending=tx.find(x=>x.id===repaymentId&&x.type==="LOAN"&&x.action==="LOAN_REPAYMENT_PENDING"&&x.status==="PENDING_CASHIER");
+if(!pending)return alert("This repayment is no longer pending.");
+let b=getCustomerLoanBalance(pending.customerId);
+let cashier=window.prompt("Enter Cashier Name who received the repayment:",""); if(!cashier||!cashier.trim())return; cashier=cashier.trim();
+let c=customers.find(x=>x.id===pending.customerId);
+if(!confirmTxn("CONFIRM LOAN REPAYMENT RECEIPT",`Customer: ${c?.name||pending.customerId} (${pending.customerId})\nAmount Received: USD ${Number(pending.amount||0).toFixed(2)}\nCollected By: Pit Manager — ${pending.collectedBy||""}\nReceived By: Cashier — ${cashier}\nRemark: ${pending.reference||"-"}`))return;
+let now=new Date().toISOString(); pending.status="CASHIER_RECEIVED"; pending.receivedAt=now; pending.receivedBy=cashier;
+const repaymentAmount=Number(pending.amount||0); const outstandingAtReceipt=Number(b.balance||0); const advanceGenerated=Math.max(0,repaymentAmount-outstandingAtReceipt); tx.push({id:"TX-"+Date.now(),date:now,customerId:pending.customerId,type:"LOAN",amount:repaymentAmount,action:"LOAN_REPAID",status:"RECEIVED",reference:pending.reference||"",pendingRepaymentId:pending.id,collectedBy:pending.collectedBy||"",staff:cashier,receivedBy:cashier,advanceGenerated,businessDate:businessDateForNow()});
+save(); show("cashier"); alert("Loan repayment received. Cashier: "+cashier);
+}
+function rewardUnit(type){return type==="LUCKY_CHIPS"?"GHS":"USD";}
+function rewardLabel(type){return type==="CASHBACK"?"Cashback":type==="LUCKY_CHIPS"?"Lucky Chips":"Daily Draw / Raffle";}
+function updateRewardUnit(){const t=document.getElementById("rewardType")?.value||"CASHBACK";const l=document.getElementById("rewardAmountLabel");if(l)l.textContent=`Amount (${rewardUnit(t)}) *`;}
+function clearRewardForm(){["rewardAmount","rewardRef"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});if(document.getElementById("rewardType"))document.getElementById("rewardType").value="CASHBACK";updateRewardUnit();}
+function rewardRows(status){return tx.filter(x=>x.type==="REWARD"&&(!status||x.status===status)).slice().reverse();}
+function updateRewardCustomerPreview(){
+ const e=document.getElementById("rewardCustomerPreview"), sel=document.getElementById("rewardCust");
+ if(!e||!sel)return;
+ const c=customers.find(x=>x.id===sel.value);
+ e.textContent=c?`Selected customer: ${c.name} — ${c.id}`:"Please select a customer.";
+}
+function approveReward(){if(!guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
+ let cid=document.getElementById("rewardCust")?.value,type=document.getElementById("rewardType")?.value||"CASHBACK",amount=Number(document.getElementById("rewardAmount")?.value||0),approver=(document.getElementById("rewardApprover")?.value||"").trim(),reference=(document.getElementById("rewardRef")?.value||"").trim();
+ if(!cid)return alert("Select a customer."); if(!approver)return alert("Enter the Pit Manager Name."); if(amount<=0)return alert("Enter a reward amount greater than zero.");
+ const c=customers.find(x=>x.id===cid); if(!c)return alert("The selected customer could not be found. Please select the customer again.");
+ const unit=rewardUnit(type), label=rewardLabel(type);
+ if(!confirmTxn("CONFIRM REWARD APPROVAL",`Customer: ${c.name} (${c.id})\nReward: ${label}\nApproved Amount: ${unit} ${amount.toFixed(2)}\nApproved By: Pit Manager — ${approver}\nRemark: ${reference||"-"}`))return;
+ const now=new Date().toISOString();
+ tx.push({id:"TX-"+Date.now(),date:now,customerId:c.id,customerName:c.name,type:"REWARD",rewardType:type,amount,unit,status:"PENDING_CASHIER",approvedBy:approver,reference});
+ save(); show("rewards"); alert(`${label} approved for ${c.name}. It is now waiting for Cashier Pay / Give.`);
+}
+
+function payReward(id){if(!guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
+ const approval=tx.find(x=>x.id===id&&x.type==="REWARD"&&x.action!=="REWARD_PAID_GIVEN"&&x.status==="PENDING_CASHIER"); if(!approval)return alert("This reward is no longer pending.");
+ const cashier=(window.prompt("Enter Cashier Name who paid / gave the reward:",currentUser?.name||"")||"").trim(); if(!cashier)return;
+ const c=customers.find(x=>x.id===approval.customerId), label=rewardLabel(approval.rewardType), unit=approval.unit||rewardUnit(approval.rewardType);
+ if(!confirmTxn("CONFIRM REWARD PAY / GIVE",`Customer: ${c?.name||approval.customerId} (${approval.customerId})\nReward: ${label}\nAmount: ${unit} ${Number(approval.amount||0).toFixed(2)}\nApproved By: Pit Manager — ${approval.approvedBy||""}\nPaid / Given By: Cashier — ${cashier}\nRemark: ${approval.reference||"-"}`))return;
+ const now=new Date().toISOString();
+ // Keep ONE reward record. Do not create a second payment record, which caused duplicate history entries.
+ approval.status="PAID_GIVEN"; approval.paidAt=now; approval.paidBy=cashier; approval.staff=cashier; approval.action="REWARD_PAID_GIVEN";
+ save(); show("cashier"); alert(`${label} marked Paid / Given. Cashier: ${cashier}`);
+}
+function rewardHistoryTable(type){
+ const currentDate=currentCashierHistoryDate();
+ const rows=rewardRows().filter(x=>x.rewardType===type&&txBusinessDate(x)===currentDate); const label=rewardLabel(type), unit=type==="LUCKY_CHIPS"?"GHS":"USD";
+ if(!rows.length)return '<div class="small">No '+label+' records yet.</div>';
+ return `<div class="report-head" style="margin-bottom:10px"><div><b>${label}</b></div><div class="print-actions"><button class="btn no-print" type="button" onclick="printRewardHistory('${type}')">Print</button><button class="btn no-print" type="button" onclick="downloadRewardHistory('${type}')">Download File</button></div></div><div class="tablewrap"><table><tr><th>Date / Time</th><th>Customer</th><th>Amount</th><th>Status</th><th>Approved By</th><th>Paid / Given By</th><th>Paid / Given Time</th><th>Reference</th></tr>${rows.map(x=>{const c=customers.find(q=>q.id===x.customerId)||{};return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${x.customerName||c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td><b>${unit} ${Number(x.amount||0).toFixed(2)}</b></td><td><span class="pill">${x.status||"-"}</span></td><td>${x.approvedBy||"-"}</td><td>${x.paidBy||"-"}</td><td>${x.paidAt?new Date(x.paidAt).toLocaleString():"-"}</td><td>${x.reference||""}</td></tr>`}).join('')}</table></div>`;
+}
+function pendingRewardTable(){
+ const currentDate=currentCashierHistoryDate();
+ const rows=rewardRows("PENDING_CASHIER").filter(x=>txBusinessDate(x)===currentDate); if(!rows.length)return '<div class="small">No approved rewards are waiting for Cashier Pay / Give.</div>';
+ const canPay=currentUser?.role==="Cashier"||currentUser?.role==="Manager";
+ return `<table><tr><th>Date / Time</th><th>Customer</th><th>Reward</th><th>Amount</th><th>Approved By</th><th>Reference</th>${canPay?'<th>Cashier Action</th>':''}</tr>${rows.map(x=>{const c=customers.find(q=>q.id===x.customerId)||{},unit=x.unit||rewardUnit(x.rewardType),label=rewardLabel(x.rewardType);return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${x.customerName||c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td>${label}</td><td><b>${unit} ${Number(x.amount||0).toFixed(2)}</b></td><td>${x.approvedBy||"Pit Manager"}</td><td>${x.reference||""}</td>${canPay?`<td><button class="btn success" type="button" onclick="payReward('${x.id}')">Pay / Give</button></td>`:''}</tr>`}).join('')}</table>`;
+}
+function renderRewardsPage(){const h=document.getElementById("rewardHistoryBox");if(h)h.innerHTML=rewardHistoryTable("CASHBACK")+'<div style="height:18px"></div>'+rewardHistoryTable("DAILY_DRAW")+'<div style="height:18px"></div>'+rewardHistoryTable("LUCKY_CHIPS");updateRewardUnit();updateRewardCustomerPreview();}
+function printRewardHistory(type){
+ const rows=rewardRows().filter(x=>x.rewardType===type), label=rewardLabel(type), unit=type==="LUCKY_CHIPS"?"GHS":"USD";
+ const body=rows.length?`<table><tr><th>Date / Time</th><th>Customer</th><th>Amount</th><th>Status</th><th>Approved By</th><th>Paid / Given By</th><th>Paid / Given Time</th><th>Reference</th></tr>${rows.map(x=>{const c=customers.find(q=>q.id===x.customerId)||{};return `<tr><td>${new Date(x.date).toLocaleString()}</td><td>${c.name||x.customerId}</td><td>${unit} ${Number(x.amount||0).toFixed(2)}</td><td>${x.status||"-"}</td><td>${x.approvedBy||"-"}</td><td>${x.paidBy||"-"}</td><td>${x.paidAt?new Date(x.paidAt).toLocaleString():"-"}</td><td>${x.reference||""}</td></tr>`}).join('')}</table>`:'<p>No records.</p>';
+ const w=window.open('','_blank'); if(!w)return; w.document.write(`<html><head><title>${label} History</title><style>@page{size:A4 portrait;margin:10mm}body{font-family:Arial,sans-serif;color:#18232c}h1{font-size:20px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:7px 6px;border-bottom:1px solid #ddd;text-align:left}th{background:#f4f6f8}.small{font-size:10px;color:#687681}</style></head><body><h1>${label} History</h1><div class="small">Printed: ${new Date().toLocaleString()}</div>${body}</body></html>`);w.document.close();w.focus();setTimeout(()=>w.print(),250);
+}
+function downloadRewardHistory(type){
+ const rows=rewardRows().filter(x=>x.rewardType===type), label=rewardLabel(type), unit=type==="LUCKY_CHIPS"?"GHS":"USD";
+ let lines=[[label+' History','Customer','Amount','Status','Approved By','Paid / Given By','Paid / Given Time','Reference']]; rows.forEach(x=>{const c=customers.find(q=>q.id===x.customerId)||{};lines.push([new Date(x.date).toLocaleString(),c.name||x.customerId,unit+' '+Number(x.amount||0).toFixed(2),x.status||'',x.approvedBy||'',x.paidBy||'',x.paidAt?new Date(x.paidAt).toLocaleString():'',x.reference||'']);});
+ const csv='\ufeff'+lines.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'); const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download=label.replace(/[^A-Za-z0-9]+/g,'_')+'_History.csv';document.body.appendChild(a);a.click();a.remove();
+}
+function rewardTotal(){const currentDate=currentCashierHistoryDate();return rewardRows("PAID_GIVEN").filter(x=>txBusinessDate(x)===currentDate).reduce((s,x)=>s+Number(x.amount||0),0)}
+function statement(){let cid=document.getElementById("rcust").value,a=tx.filter(x=>x.customerId===cid),buy=a.filter(x=>x.type==="BUY_IN").reduce((s,x)=>s+Number(x.usd||0),0),cashOut=a.filter(x=>x.type==="CASH_OUT").reduce((s,x)=>s+Number(x.usd||0),0),loanGiven=a.filter(x=>x.type==="LOAN"&&x.action==="LOAN_PAID").reduce((s,x)=>s+Number(x.amount||0),0),rep=a.filter(x=>x.type==="LOAN"&&x.action==="LOAN_REPAID").reduce((s,x)=>s+Number(x.amount||0),0),rew=a.filter(x=>x.type==="REWARD"&&x.action!=="REWARD_PAID_GIVEN").reduce((s,x)=>s+Number(x.amount||0),0),totalIn=buy+loanGiven,totalOut=cashOut+rep;document.getElementById("stmt").innerHTML=`<div class="cardgrid" style="margin-top:18px"><div class="card"><div class="label">Buy-In</div><div class="value">$${buy.toFixed(2)}</div></div><div class="card"><div class="label">Loan Given</div><div class="value">$${loanGiven.toFixed(2)}</div></div><div class="card"><div class="label">TOTAL IN</div><div class="value">$${totalIn.toFixed(2)}</div></div><div class="card"><div class="label">Cash-Out</div><div class="value">$${cashOut.toFixed(2)}</div></div><div class="card"><div class="label">Loan Repaid</div><div class="value">$${rep.toFixed(2)}</div></div><div class="card"><div class="label">TOTAL OUT</div><div class="value">$${totalOut.toFixed(2)}</div></div></div><div class="panel"><b>Customer result:</b> $${(totalOut-totalIn).toFixed(2)} &nbsp; <b>Outstanding loan:</b> $${Math.max(0,loanGiven-rep).toFixed(2)} &nbsp; <b>Rewards:</b> $${rew.toFixed(2)}</div>`}
+nav();show("dashboard");
+</script>
+<script>setTimeout(()=>{try{repairLegacyBuyIns();}catch(e){}},0);</script></body></html>
+<script>
+document.addEventListener("change",function(ev){
+  if(ev.target && ev.target.id==="loancust") updateLoanBalance();
+});
+</script>

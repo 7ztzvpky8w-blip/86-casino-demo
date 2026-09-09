@@ -1,0 +1,236 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Casino Master - Reports</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#18232c}.top{background:#101a23;color:#fff;padding:18px 28px;font-weight:800;font-size:24px}
+.wrap{max-width:1200px;margin:28px auto;padding:0 20px}.panel{background:#fff;border:1px solid #dbe2e7;border-radius:12px;padding:22px;margin-bottom:18px}
+h1{margin:0 0 8px}h2{margin-top:0}.small{color:#687681;font-size:14px}.back{display:inline-block;margin-bottom:18px;padding:10px 14px;border-radius:8px;background:#263642;color:#fff;text-decoration:none}
+.filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-top:18px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-weight:700;font-size:13px}
+select,input{padding:10px 12px;border:1px solid #cbd5dc;border-radius:8px;background:#fff;font-size:14px;min-width:260px}.btn{padding:10px 14px;border:0;border-radius:8px;cursor:pointer;background:#263642;color:#fff;font-weight:700}
+.tablewrap{overflow:auto;margin-top:18px}table{width:100%;border-collapse:collapse}th,td{padding:11px 10px;border-bottom:1px solid #e3e8eb;text-align:left;white-space:nowrap}
+.positive{font-weight:800}.negative{font-weight:800}.summary{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}.card{border:1px solid #e1e6ea;border-radius:10px;padding:14px 18px;min-width:180px}.card .label{font-size:13px;color:#687681}.card .value{font-size:21px;font-weight:800;margin-top:5px}
+.notice{margin-top:14px;padding:11px 13px;border-radius:8px;background:#fff6e5;border:1px solid #f0d49a;color:#6d531b}
+.daily-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.report-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.print-actions{display:flex;gap:8px;flex-wrap:wrap}.report-title{font-size:22px;font-weight:800}.totalbar{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.totalbox{border:1px solid #dfe5e9;border-radius:9px;padding:12px 16px;min-width:190px}.totalbox b{display:block;font-size:20px;margin-top:4px}@media(max-width:900px){.daily-grid{grid-template-columns:1fr}}
+@media print{body{background:#fff}.top,.back,.no-print,.filters,.daily-controls{display:none!important}.wrap{max-width:none;margin:0;padding:0}.panel{border:0;box-shadow:none;margin:0 0 24px;padding:0;page-break-inside:auto}.print-section{page-break-after:always}.print-section:last-child{page-break-after:auto}.tablewrap{overflow:visible}table{font-size:11px}th,td{padding:6px 5px}.report-title{font-size:18px}.small{font-size:10px}}
+.login-overlay{display:none!important;position:fixed;inset:0;background:#101820;display:flex;align-items:center;justify-content:center;z-index:9999}.login-box{width:390px;max-width:92%;background:#fff;border-radius:14px;padding:28px;box-shadow:0 20px 60px #0008}.login-box h1{margin:0 0 6px}.login-box p{margin:0 0 20px;color:#687781;font-size:13px}.login-box .field{margin-bottom:13px}.login-box .btn{width:100%;margin-top:6px}.login-error{color:#b42318;font-size:12px;min-height:18px;margin-top:8px}</style></head><body><div id="loginOverlay" class="login-overlay"><div class="login-box"><h1>CASINO MASTER</h1><p>Staff login required.</p><div class="field"><label>Username</label><input id="loginUsername" autocomplete="username"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password"></div><button class="btn" onclick="loginReport()">LOGIN</button><div id="loginError" class="login-error"></div></div></div>
+<div class="top">CASINO MASTER — Reports</div><div class="wrap"><a class="back" href="index.html">← Back to Casino Master</a>
+<div class="panel"><h1>Customer Result</h1><div class="small">Choose a customer below to see that customer's complete Buy-In, Loan Given, Loan Repaid, Cashout and Result. Loan repayments are shown separately, do not increase TOTAL IN, and are included in TOTAL OUT because the customer returned that money to the casino.</div>
+<div class="filters"><div class="field"><label>Choose Customer</label><select id="customerSelect"></select></div><button class="btn" id="viewBtn" type="button">View Customer</button></div>
+<div id="duplicateNotice"></div><div id="summary"></div><div id="result" class="tablewrap"></div></div>
+<div class="panel daily-controls"><div class="report-head"><div><h2 style="margin:0">Daily Printable Reports</h2><div class="small">Select a casino business date. The casino day runs 6:00 PM to 6:00 AM; all activity from 6:00 PM through 5:59 AM is grouped under the evening business date. The reports below are designed for the daily print file.</div></div><div class="filters" style="margin-top:0"><div class="field"><label>Business Date</label><input id="reportDate" type="date"></div><button class="btn" type="button" onclick="renderDailyReports()">Refresh</button><button class="btn" type="button" onclick="printAllDaily()">Print All Daily Reports</button></div></div></div>
+<div id="dailyReports">
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily Cashback Report</div><div id="cashbackDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('cashbackReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('cashbackReport','Daily_Cashback_Report')">Download File</button></div><div id="cashbackReport" class="tablewrap"></div></div>
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily Draw / Raffle Report</div><div id="drawDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('drawReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('drawReport','Daily_Draw_Report')">Download File</button></div><div id="drawReport" class="tablewrap"></div></div>
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily Lucky Chips Report</div><div id="chipsDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('chipsReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('chipsReport','Daily_Lucky_Chips_Report')">Download File</button></div><div id="chipsReport" class="tablewrap"></div></div>
+  
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily MoMo Collection</div><div id="momoDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('momoReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('momoReport','Daily_MoMo_Collection')">Download File</button></div><div id="momoReport" class="tablewrap"></div></div>
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily Card Collection</div><div id="cardDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('cardReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('cardReport','Daily_Card_Zenith_Collection')">Download File</button></div><div id="cardReport" class="tablewrap"></div></div>
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily CREDIT</div><div id="loanGivenDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('loanGivenReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('loanGivenReport','Daily_Loan_Paid_Given')">Download File</button></div><div id="loanGivenReport" class="tablewrap"></div></div>
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily DEPOSIT</div><div id="loanRepaidDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('loanRepaidReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('loanRepaidReport','Daily_Loan_Received_Back')">Download File</button></div><div id="loanRepaidReport" class="tablewrap"></div></div>
+  <div class="panel print-section"><div class="report-head"><div><div class="report-title">Daily Customer In & Out</div><div id="customerInOutDate" class="small"></div></div><button class="btn no-print" type="button" onclick="printSection('customerInOutReport')">Print</button><button class="btn no-print" type="button" onclick="downloadReport('customerInOutReport','Daily_Customer_In_Out_Summary')">Download File</button></div><div id="customerInOutReport" class="tablewrap"></div></div>
+</div>
+<div class="panel"><h2>Transactions for Selected Customer</h2><div id="tx" class="tablewrap"></div></div></div>
+<script>
+const authUsers=JSON.parse(localStorage.getItem('casinoUsers')||'[]');
+let currentUser=JSON.parse(sessionStorage.getItem('casinoCurrentUser')||'null');
+function loginReport(){const u=(document.getElementById('loginUsername').value||'').trim().toLowerCase(),p=document.getElementById('loginPassword').value||'';const x=authUsers.find(a=>a.active!==false&&a.username.toLowerCase()===u&&a.password===p);if(!x){document.getElementById('loginError').textContent='Invalid username or password.';return;}if(!['Manager','Cashier','Pit Manager'].includes(x.role)){document.getElementById('loginError').textContent='Your role does not have Reports permission.';return;}currentUser={username:x.username,name:x.name,role:x.role};sessionStorage.setItem('casinoCurrentUser',JSON.stringify(currentUser));document.getElementById('loginOverlay').style.display='none';}
+if(!currentUser||!['Manager','Cashier','Pit Manager'].includes(currentUser.role)){document.getElementById('loginOverlay').style.display='flex';}else{document.getElementById('loginOverlay').style.display='none';}
+let customers=JSON.parse(localStorage.getItem('customers')||'[]');
+let tx=JSON.parse(localStorage.getItem('tx')||'[]');
+const select=document.getElementById('customerSelect');
+
+function applyReportData(payload){
+ if(!payload||payload.type!=='CASINO_MASTER_REPORT_DATA') return;
+ customers=Array.isArray(payload.customers)?payload.customers:[];
+ tx=Array.isArray(payload.tx)?payload.tx:[];
+ if(payload.currentUser){ currentUser=payload.currentUser; sessionStorage.setItem('casinoCurrentUser',JSON.stringify(currentUser)); document.getElementById('loginOverlay').style.display='none'; }
+ const dates=[...new Set(tx.map(txBusinessDate).filter(Boolean))].sort();
+ const current=businessDateKey(new Date());
+ const rd=document.getElementById('reportDate'); if(rd) rd.value=current;
+ const sel=document.getElementById('customerSelect');
+ if(sel) sel.innerHTML='<option value=\"ALL\">All Customers</option>'+customers.map((c,i)=>`<option value=\"${i}\">${c.name} — ${c.id}</option>`).join('');
+ renderDailyReports(); render();
+}
+window.addEventListener('message',e=>{applyReportData(e.data);});
+window.addEventListener('DOMContentLoaded',()=>{if(window.__CASINO_REPORT_PAYLOAD__)applyReportData(window.__CASINO_REPORT_PAYLOAD__);});
+// Handshake with the parent application so report data is never missed during iframe startup.
+try{ if(window.parent && window.parent!==window) window.parent.postMessage({type:'CASINO_MASTER_REPORT_READY'},'*'); }catch(err){}
+
+function money(v){return 'USD '+Number(v||0).toFixed(2)}
+function customerRows(date){
+  return customers.map((c,i)=>{
+    const ins=tx.filter(x=>x.type==='BUY_IN'&&x.customerId===c.id&&txBusinessDate(x)===date);
+    const outs=tx.filter(x=>x.type==='CASH_OUT'&&x.customerId===c.id&&txBusinessDate(x)===date);
+    const buyInTotal=ins.reduce((s,x)=>s+Number(x.usd||0),0);
+    const cashOutTotal=outs.reduce((s,x)=>s+Number(x.usd||0),0);
+    const loans=tx.filter(x=>x.type==='LOAN'&&x.action==='LOAN_PAID'&&x.customerId===c.id&&txBusinessDate(x)===date);
+    const loanRepaid=tx.filter(x=>x.type==='LOAN'&&x.action==='LOAN_REPAID'&&x.customerId===c.id&&txBusinessDate(x)===date);
+    const loanGiven=loans.reduce((s,x)=>s+Number(x.amount||0),0);
+    const repaid=loanRepaid.reduce((s,x)=>s+Number(x.amount||0),0);
+    const tin=buyInTotal+loanGiven;
+    const tout=cashOutTotal+repaid; return {c,i,ins,outs,loans,loanRepaid,buyInTotal,tin,tout,cashOutTotal,loanGiven,repaid,outstanding:Math.max(0,loanGiven-repaid),result:tout-tin};
+  });
+}
+let allRows=[];
+
+function refreshCustomerRows(){
+  const date=document.getElementById('reportDate')?.value||businessDateKey(new Date());
+  allRows=customerRows(date);
+  select.innerHTML='<option value="ALL">All Customers</option>'+allRows.map(r=>`<option value="${r.i}">${r.c.name} — ${r.c.id}</option>`).join('');
+}
+
+function render(){
+  refreshCustomerRows();
+  const val=select.value;
+  const rows=val==='ALL'?allRows.filter(r=>r.ins.length||r.outs.length||r.loans.length):[allRows[Number(val)]];
+  const valid=rows.filter(Boolean);
+
+  if(val==='ALL'){
+    document.getElementById('summary').innerHTML='';
+  }else if(valid.length){
+    const r=valid[0];
+    document.getElementById('summary').innerHTML=`<div class="summary">
+      <div class="card"><div class="label">TOTAL IN</div><div class="value">${money(r.tin)}</div></div>
+      <div class="card"><div class="label">TOTAL OUT (CASH-OUT + LOAN REPAID)</div><div class="value">${money(r.tout)}</div></div>
+      <div class="card"><div class="label">RESULT (OUT − IN)</div><div class="value">${money(r.result)}</div></div>
+      <div class="card"><div class="label">CREDIT</div><div class="value">${money(r.loanGiven)}</div></div>
+      <div class="card"><div class="label">LOAN REPAID</div><div class="value">${money(r.repaid)}</div></div>
+      <div class="card"><div class="label">OUTSTANDING LOAN</div><div class="value">${money(r.outstanding)}</div></div>
+    </div>`;
+  }
+
+  document.getElementById('result').innerHTML=valid.length?`<table><tr><th>Customer</th><th>Buy-In Transactions</th><th>CREDIT</th><th>TOTAL IN (USD)</th><th>Cashout Transactions</th><th>DEPOSIT</th><th>TOTAL OUT (USD)</th><th>CREDIT</th><th>OUTSTANDING LOAN</th><th>RESULT (OUT − IN)</th></tr>${valid.map(r=>`<tr><td><b>${r.c.name}</b><br><span class="small">${r.c.id}</span></td><td>${r.ins.length}</td><td><b>${money(r.loanGiven)}</b></td><td><b>${money(r.tin)}</b></td><td>${r.outs.length}</td><td><b>${money(r.repaid)}</b></td><td><b>${money(r.tout)}</b></td><td><b>${money(r.loanGiven)}</b></td><td><b>${money(r.outstanding)}</b></td><td class="${r.result>=0?'positive':'negative'}"><b>${money(r.result)}</b></td></tr>`).join('')}</table>`:'<div class="small">No customer money transactions recorded for this customer yet.</div>';
+
+  const reportDate=document.getElementById('reportDate')?.value||businessDateKey(new Date());
+  const chosen=tx.filter(x=>txBusinessDate(x)===reportDate && (val==='ALL'||(valid[0] && x.customerId===valid[0].c.id)));
+  document.getElementById('tx').innerHTML=chosen.length?`<table><tr><th>Time</th><th>Type</th><th>Action</th><th>Customer</th><th>Native Amount</th><th>USD Value</th><th>Rate Used</th><th>Status / Staff</th></tr>${chosen.map(x=>{const c=customers.find(q=>q.id===x.customerId)||{}; const isLoan=x.type==='LOAN'; const usd=isLoan?Number(x.amount||0):Number(x.usd||0); return `<tr><td>${x.time||new Date(x.date).toLocaleString()}</td><td>${x.type||''}</td><td>${x.action||''}</td><td>${c.name||x.customerName||x.customerId||''}</td><td>${isLoan?'USD '+Number(x.amount||0).toFixed(2):(x.currency||'')+' '+Number(x.amount||0).toFixed(2)}</td><td>${money(usd)}</td><td>${x.rateUsed||x.rate||''}</td><td>${x.status||x.staff||x.approvedBy||''}</td></tr>`}).join('')}</table>`:'<div class="small">No transactions recorded yet.</div>';
+}
+document.getElementById('viewBtn').addEventListener('click',render);
+select.addEventListener('change',render);
+
+// Highlight duplicate customer IDs because IDs must be unique for correct accounting.
+const counts={}; customers.forEach(c=>counts[c.id]=(counts[c.id]||0)+1);
+const dup=Object.keys(counts).filter(id=>counts[id]>1);
+if(dup.length) document.getElementById('duplicateNotice').innerHTML='<div class="notice"><b>Important:</b> Some customers have the same Customer ID ('+dup.join(', ')+'). Their transactions will currently appear under the same ID. We should correct duplicate IDs in the Customers module before production.</div>';
+
+function localDateKey(d){const z=new Date(d);const y=z.getFullYear();const m=String(z.getMonth()+1).padStart(2,'0');const day=String(z.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
+function businessDateKey(d){
+ const z=new Date(d);
+ if(Number.isNaN(z.getTime())) return '';
+ const mins=z.getHours()*60+z.getMinutes();
+ const key=(mins<18)?new Date(z.getFullYear(),z.getMonth(),z.getDate()-1):z;
+ return `${key.getFullYear()}-${String(key.getMonth()+1).padStart(2,'0')}-${String(key.getDate()).padStart(2,'0')}`;
+}
+function businessDateLabel(v){if(!v)return '';const [y,m,d]=v.split('-');return `${d}/${m}/${y}`;}
+function txBusinessDate(x){
+ const explicit=x.businessDate||x.business_date||x.businessDateKey;
+ if(explicit&&/^\d{4}-\d{2}-\d{2}$/.test(String(explicit))) return String(explicit);
+ return businessDateKey(x.date||x.timestamp||x.createdAt||x.time);
+}
+function dailyTx(date){return tx.filter(x=>txBusinessDate(x)===date);}
+function actionNorm(x){return String(x.action||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_');}
+function isLoanGiven(x){
+ if(x.type!=='LOAN') return false;
+ const a=actionNorm(x);
+ if(['LOAN_PAID','LOAN_GIVEN','LOAN_CASH_PAID','LOAN_PAID_GIVEN'].includes(a)) return true;
+ return ['PAID_GIVEN','CASHIER_PAID'].includes(String(x.status||'').toUpperCase()) || !!x.paidBy || !!x.paidAt;
+}
+function isLoanRepaid(x){
+ if(x.type!=='LOAN') return false;
+ const a=actionNorm(x);
+ if(['LOAN_REPAID','LOAN_RECEIVED','LOAN_REPAYMENT_RECEIVED','LOAN_REPAYMENT'].includes(a)) return true;
+ return ['RECEIVED','CASHIER_RECEIVED'].includes(String(x.status||'').toUpperCase()) || !!x.receivedBy || !!x.receivedAt;
+}
+function loanUsd(x){return Number(x.usd!=null?x.usd:x.amount||0);}
+function txTime(x){const d=new Date(x.date||x.timestamp||x.createdAt);return Number.isNaN(d.getTime())?'':d.toLocaleString();}
+function customerName(cid){const c=customers.find(q=>q.id===cid);return c?c.name+' — '+c.id:(cid||'');}
+function customerCreditBalance(cid){if(!cid)return 0;const generated=tx.filter(x=>x.customerId===cid&&x.type==='LOAN'&&x.action==='LOAN_REPAID').reduce((s,x)=>s+Number(x.advanceGenerated||0),0);const used=tx.filter(x=>x.customerId===cid&&x.type==='BUY_IN'&&Number(x.creditUsed||0)>0).reduce((s,x)=>s+Number(x.creditUsed||0),0);return Math.max(0,generated-used);}
+function renderDailyReports(){
+ const date=document.getElementById('reportDate').value; if(!date)return;
+ const rows=dailyTx(date);
+ // Report uses the stored business date when available, with a safe fallback to the transaction timestamp.
+
+ const given=rows.filter(isLoanGiven);
+ const repaid=rows.filter(isLoanRepaid);
+ const money2=v=>'USD '+Number(v||0).toFixed(2);
+ const customerMoney=v=>'$'+Number(v||0).toFixed(2);
+ const givenTotal=given.reduce((s,x)=>s+loanUsd(x),0), repaidTotal=repaid.reduce((s,x)=>s+loanUsd(x),0);
+ document.getElementById('loanGivenDate').textContent='Business Date: '+businessDateLabel(date);
+ document.getElementById('loanRepaidDate').textContent='Business Date: '+businessDateLabel(date);
+ document.getElementById('customerInOutDate').textContent='Business Date: '+businessDateLabel(date);
+ document.getElementById('momoDate').textContent='Business Date: '+businessDateLabel(date);
+ document.getElementById('cardDate').textContent='Business Date: '+businessDateLabel(date);
+ document.getElementById('cashbackDate').textContent='Business Date: '+businessDateLabel(date);
+ document.getElementById('drawDate').textContent='Business Date: '+businessDateLabel(date);
+ document.getElementById('chipsDate').textContent='Business Date: '+businessDateLabel(date);
+ const rewards=rows.filter(x=>x.type==='REWARD'&&x.status==='PAID_GIVEN');
+ const rewardCashback=rewards.filter(x=>x.rewardType==='CASHBACK');
+ const rewardDraw=rewards.filter(x=>x.rewardType==='DAILY_DRAW');
+ const rewardChips=rewards.filter(x=>x.rewardType==='LUCKY_CHIPS');
+ function rewardReportHtml(arr,unit,label){
+   const total=arr.reduce((s,x)=>s+Number(x.amount||0),0);
+   const body=arr.map((x,i)=>`<tr><td>${i+1}</td><td>${txTime(x)}</td><td><b>${x.customerName||customerName(x.customerId)}</b></td><td>${unit} ${Number(x.amount||0).toFixed(2)}</td><td>${x.approvedBy||'Pit Manager'}</td><td>${x.paidBy||x.staff||'Cashier'}</td><td>${x.paidAt?txTime({date:x.paidAt}):''}</td><td>${x.reference||''}</td></tr>`).join('');
+   return `<div class="totalbar"><div class="totalbox">${label}<b>${unit} ${total.toFixed(2)}</b></div><div class="totalbox">Paid / Given<b>${arr.length}</b></div></div>`+(body?`<table><tr><th>#</th><th>Approved Date / Time</th><th>Customer</th><th>Amount</th><th>Approved By</th><th>Paid / Given By</th><th>Paid / Given Time</th><th>Reference</th></tr>${body}</table>`:'<div class="small">No '+label.toLowerCase()+' paid / given on this business date.</div>');
+ }
+ document.getElementById('cashbackReport').innerHTML=rewardReportHtml(rewardCashback,'USD','Cashback');
+ document.getElementById('drawReport').innerHTML=rewardReportHtml(rewardDraw,'USD','Daily Draw / Raffle');
+ document.getElementById('chipsReport').innerHTML=rewardReportHtml(rewardChips,'GHS','Lucky Chips');
+ const moneyIn=x=>x.type==='BUY_IN'||isLoanGiven(x)?Number(x.usd!=null?x.usd:x.amount||0):0;
+ const moneyOut=x=>x.type==='CASH_OUT'||isLoanRepaid(x)?Number(x.usd!=null?x.usd:x.amount||0):0;
+ const relevant=rows.filter(x=>moneyIn(x)||moneyOut(x));
+ const totalIn=relevant.reduce((s,x)=>s+moneyIn(x),0), totalOut=relevant.reduce((s,x)=>s+moneyOut(x),0);
+ const grouped={}; relevant.forEach(x=>{(grouped[x.customerId]??=[]).push(x)});
+ let body=''; let customerCount=0;
+ Object.keys(grouped).sort((a,b)=>customerName(a).localeCompare(customerName(b))).forEach(cid=>{
+   customerCount++; const rs=grouped[cid];
+   const cash=rs.filter(x=>x.type==='BUY_IN' && ['cash',''].includes(methodKey(x))).reduce((s,x)=>s+buyUsd(x),0);
+   const credit=rs.filter(x=>x.type==='BUY_IN' && Number(x.creditUsed||0)>0).reduce((s,x)=>s+Number(x.creditUsed||0),0);
+   const card=rs.filter(x=>x.type==='BUY_IN' && isCard(x)).reduce((s,x)=>s+buyUsd(x),0);
+   const momo=rs.filter(x=>x.type==='BUY_IN' && isMomo(x)).reduce((s,x)=>s+buyUsd(x),0);
+   // Any other buy-in method is retained in total buy-in, but not silently assigned to Cash/Card/MoMo.
+   const buyin=rs.reduce((s,x)=>s+buyUsd(x),0);
+   const loanGiven=rs.filter(isLoanGiven).reduce((s,x)=>s+loanUsd(x),0);
+   const cashout=rs.filter(x=>x.type==='CASH_OUT').reduce((s,x)=>s+Number(x.usd!=null?x.usd:x.amount||0),0);
+   const loanRepaid=rs.filter(isLoanRepaid).reduce((s,x)=>s+loanUsd(x),0);
+   const cin=buyin+loanGiven, cout=cashout+loanRepaid, result=cout-cin;
+   body+=`<tr><td><b>${customerName(cid)}</b></td><td>${customerMoney(cash)}</td><td>${customerMoney(card)}</td><td>${customerMoney(momo)}</td><td>${customerMoney(credit)}</td><td><b>${customerMoney(buyin)}</b></td><td>${customerMoney(loanGiven)}</td><td>${customerMoney(cin)}</td><td>${customerMoney(cashout)}</td><td>${customerMoney(loanRepaid)}</td><td><b>${customerMoney(cout)}</b></td><td><b>${customerMoney(result)}</b></td></tr>`;
+ });
+ document.getElementById('customerInOutReport').innerHTML=`<div class="totalbar"><div class="totalbox">Customers with Activity<b>${customerCount}</b></div><div class="totalbox">TOTAL IN<b>${customerMoney(totalIn)}</b></div><div class="totalbox">TOTAL OUT<b>${customerMoney(totalOut)}</b></div><div class="totalbox">RESULT (IN − OUT)<b>${customerMoney(totalIn-totalOut)}</b></div></div>`+(body?`<table><tr><th>Customer</th><th>Cash Buy-In</th><th>Card Buy-In</th><th>MoMo Buy-In</th><th>Customer Credit Used</th><th>TOTAL BUY-IN</th><th>Loan Taken</th><th>TOTAL IN</th><th>Cash-Out</th><th>Loan Paid Back</th><th>TOTAL OUT</th><th>RESULT +/-</th></tr>${body}</table>`:'<div class="small">No customer In & Out transactions were recorded on this date.</div>');
+}
+function csvEscape(v){const s=String(v??'');return '"'+s.replace(/"/g,'""')+'"';}
+function downloadReport(id,baseName){
+ const node=document.getElementById(id); if(!node)return;
+ const table=node.querySelector('table');
+ const date=document.getElementById('reportDate').value;
+ let lines=[];
+ lines.push([node.parentElement.querySelector('.report-title')?.textContent||'Daily Report','Business Date',businessDateLabel(date)].map(csvEscape).join(','));
+ if(table){
+   [...table.querySelectorAll('tr')].forEach(tr=>lines.push([...tr.children].map(td=>csvEscape(td.innerText.replace(/\n/g,' ').trim())).join(',')));
+ } else { lines.push([node.innerText.trim()].map(csvEscape).join(',')); }
+ const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=baseName+'_'+date+'.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function printSection(id){
+ const node=document.getElementById(id);if(!node)return;
+ const title=node.parentElement.querySelector('.report-title')?.textContent||'Daily Report';
+ const date=document.getElementById('reportDate').value;
+ const landscape=id==='customerInOutReport';
+ const w=window.open('','_blank');
+ w.document.write(`<html><head><title>${title} - ${businessDateLabel(date)}</title><style>@page{size:${landscape?'A4 landscape':'A4 portrait'};margin:10mm}body{font-family:Arial,sans-serif;color:#18232c;margin:0}.casino-header{font-size:24px;font-weight:800;text-align:center;margin:0 0 10px}h1{font-size:20px}table{width:100%;border-collapse:collapse;font-size:${landscape?'9px':'11px'}}th,td{padding:${landscape?'4px 3px':'7px 6px'};border-bottom:1px solid #ddd;text-align:left;vertical-align:top}th{background:#f4f6f8}.totalbar{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap}.totalbox{border:1px solid #ddd;padding:10px;min-width:150px}.totalbox b{display:block;font-size:18px;margin-top:4px}.small{font-size:11px;color:#687681}.no-print{display:none!important}</style></head><body><div class="casino-header">86 CASINO</div><h1>${title}</h1><div class="small">Business Date: ${businessDateLabel(date)}</div>${node.innerHTML}</body></html>`);
+ w.document.close();w.focus();setTimeout(()=>w.print(),250);
+}
+function printAllDaily(){
+  renderDailyReports();
+  const ids=['customerInOutReport','momoReport','cardReport','loanGivenReport','loanRepaidReport','cashbackReport','drawReport','chipsReport'];
+  const titles=['Customer In & Out — Daily Summary','MoMo Collection — Daily Summary','Card / Zenith Collection — Daily Summary','CREDIT — Daily Detail','DEPOSIT — Daily Detail','Daily Cashback Report','Daily Draw / Raffle Report','Daily Lucky Chips Report'];
+  const date=document.getElementById('reportDate').value;
+  const sections=ids.map((id,i)=>{const n=document.getElementById(id); const cls=id==='customerInOutReport'?'customer-landscape':''; return `<section class="${cls}"><div class="casino-header">86 CASINO</div><h1>${titles[i]}</h1><div class="small">Business Date: ${businessDateLabel(date)}</div>${n?n.innerHTML:''}</section>`;}).join('');
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Daily Casino Reports - ${businessDateLabel(date)}</title><style>@page{size:A4 portrait;margin:10mm}@page customerLandscape{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;color:#18232c;margin:28px}.casino-header{font-size:24px;font-weight:800;text-align:center;margin:0 0 10px}section{page-break-after:always}section:last-child{page-break-after:auto}section.customer-landscape{page:customerLandscape}h1{font-size:20px;margin:0 0 6px}.small{font-size:11px;color:#687681}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px}th,td{padding:7px 6px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}th{background:#f4f6f8}.totalbar{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap}.totalbox{border:1px solid #ddd;padding:10px;min-width:150px}.totalbox b{display:block;font-size:18px;margin-top:4px}</style></head><body>${sections}</body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),250);
+}
+const rd=document.getElementById('reportDate');
+if(rd){
+ rd.value=businessDateKey(new Date());
+ renderDailyReports();
+}
+render();
+</script></body></html>
