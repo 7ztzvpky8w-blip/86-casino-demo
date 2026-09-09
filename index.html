@@ -1351,7 +1351,8 @@ function downloadRewardHistory(type){
 }
 function rewardTotal(){const currentDate=currentCashierHistoryDate();return rewardRows("PAID_GIVEN").filter(x=>txBusinessDate(x)===currentDate).reduce((s,x)=>s+Number(x.amount||0),0)}
 function statement(){let cid=document.getElementById("rcust").value,a=tx.filter(x=>x.customerId===cid),buy=a.filter(x=>x.type==="BUY_IN").reduce((s,x)=>s+Number(x.usd||0),0),cashOut=a.filter(x=>x.type==="CASH_OUT").reduce((s,x)=>s+Number(x.usd||0),0),loanGiven=a.filter(x=>x.type==="LOAN"&&x.action==="LOAN_PAID").reduce((s,x)=>s+Number(x.amount||0),0),rep=a.filter(x=>x.type==="LOAN"&&x.action==="LOAN_REPAID").reduce((s,x)=>s+Number(x.amount||0),0),rew=a.filter(x=>x.type==="REWARD"&&x.action!=="REWARD_PAID_GIVEN").reduce((s,x)=>s+Number(x.amount||0),0),totalIn=buy+loanGiven,totalOut=cashOut+rep;document.getElementById("stmt").innerHTML=`<div class="cardgrid" style="margin-top:18px"><div class="card"><div class="label">Buy-In</div><div class="value">$${buy.toFixed(2)}</div></div><div class="card"><div class="label">Loan Given</div><div class="value">$${loanGiven.toFixed(2)}</div></div><div class="card"><div class="label">TOTAL IN</div><div class="value">$${totalIn.toFixed(2)}</div></div><div class="card"><div class="label">Cash-Out</div><div class="value">$${cashOut.toFixed(2)}</div></div><div class="card"><div class="label">Loan Repaid</div><div class="value">$${rep.toFixed(2)}</div></div><div class="card"><div class="label">TOTAL OUT</div><div class="value">$${totalOut.toFixed(2)}</div></div></div><div class="panel"><b>Customer result:</b> $${(totalOut-totalIn).toFixed(2)} &nbsp; <b>Outstanding loan:</b> $${Math.max(0,loanGiven-rep).toFixed(2)} &nbsp; <b>Rewards:</b> $${rew.toFixed(2)}</div>`}
-nav();show("dashboard");
+nav();
+if(currentUser){ show("dashboard"); }
 </script>
 <script>setTimeout(()=>{try{repairLegacyBuyIns();}catch(e){}},0);</script></body></html>
 <script>
