@@ -137,6 +137,21 @@ html,body{min-height:100%;}
 .brand small{display:block;margin:0 0 0 4px;font-size:9px;letter-spacing:1.7px;color:#aeb9c5;}
 </style>
 
+
+<style>
+.daily-search-panel{border:1px solid #dbe2ea;border-radius:16px;padding:16px;margin-bottom:14px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 8px 20px rgba(18,39,63,.05)}
+.daily-search-row{display:flex;gap:10px;margin-top:12px;align-items:center}
+.daily-search-row input{flex:1;min-width:220px}
+.daily-search-result{margin-top:12px}
+.daily-search-card{border:1px solid #d9e1ea;border-radius:14px;padding:14px;background:#fff}
+.daily-search-name{font-size:16px;font-weight:800;color:#102744}
+.daily-search-name span{font-size:12px;font-weight:600;color:#64748b}
+.daily-search-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.daily-search-grid>div{border:1px solid #e0e6ed;border-radius:10px;padding:10px}
+.daily-search-grid span{display:block;font-size:11px;color:#64748b;margin-bottom:4px}
+.daily-search-grid b{font-size:16px;color:#102744}
+@media(max-width:760px){.daily-search-row{flex-direction:column;align-items:stretch}.daily-search-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
 </head>
 <body>
 <div id="loginOverlay" class="login-overlay"><div class="login-box">
@@ -443,6 +458,25 @@ function reportMoney(v){return '$'+Number(v||0).toFixed(2)}
 function reportEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function reportRowsFor(date){return tx.filter(x=>reportBusinessDate(x)===date)}
 function reportLatestDate(){return businessDateForNow()}
+function searchDailyCustomerRecord(date){
+ const q=String(document.getElementById('dailyCustomerSearch')?.value||'').trim().toLowerCase();
+ const box=document.getElementById('dailyCustomerSearchResult'); if(!box)return;
+ if(!q){box.innerHTML='<div class="small">Enter a customer name, ID or mobile number and click Search Customer.</div>';return;}
+ const matches=customers.filter(c=>[c.name,c.id,c.mobile,c.phone].some(v=>String(v||'').toLowerCase().includes(q)));
+ if(!matches.length){box.innerHTML='<div class="report-empty">No customer found matching “'+reportEsc(q)+'”.</div>';return;}
+ const rows=reportRowsFor(date);
+ const data=matches.map(c=>{
+   const rs=rows.filter(x=>x.customerId===c.id);
+   const buy=rs.filter(x=>x.type==='BUY_IN').reduce((s,x)=>s+Number(x.usd||0),0);
+   const credit=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.action==='LOAN_GIVEN'||x.status==='PAID_GIVEN')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);
+   const cash=rs.filter(x=>x.type==='CASH_OUT').reduce((s,x)=>s+Number(x.usd||0),0);
+   const deposit=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);
+   return {c,buy,credit,tin:buy+credit,cash,deposit,tout:cash+deposit,result:(cash+deposit)-(buy+credit),count:rs.length};
+ }).filter(x=>x.count>0);
+ if(!data.length){box.innerHTML='<div class="report-empty">No customer money transactions recorded for this business date.</div>';return;}
+ box.innerHTML=data.map(x=>`<div class="daily-search-card"><div><div class="daily-search-name">${reportEsc(x.c.name)} <span>(${reportEsc(x.c.id)})</span></div><div class="small">Business Date: ${date.split('-').reverse().join('/')}</div></div><div class="daily-search-grid"><div><span>TOTAL IN</span><b>${reportMoney(x.tin)}</b></div><div><span>TOTAL OUT</span><b>${reportMoney(x.tout)}</b></div><div><span>RESULT (OUT − IN)</span><b>${reportMoney(x.result)}</b></div><div><span>STATUS</span><b>${x.result>0?'LOSS':x.result<0?'WIN':'EVEN'}</b></div></div><div class="small" style="margin-top:8px">Buy-In ${reportMoney(x.buy)} · CREDIT ${reportMoney(x.credit)} · Cash-Out ${reportMoney(x.cash)} · DEPOSIT ${reportMoney(x.deposit)}</div></div>`).join('');
+}
+
 function printReportBlock(id,title){const node=document.getElementById(id);if(!node)return;const clone=node.cloneNode(true);clone.querySelectorAll('.report-extra-row').forEach(r=>{r.style.display='table-row';r.classList.remove('report-extra-row')});clone.querySelectorAll('.report-no-print').forEach(e=>e.remove());const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>'+reportEsc(title)+'</title><style>body{font-family:Arial,sans-serif;color:#18232c;margin:20px}.casino-print-header{font-size:24px;font-weight:800;text-align:center;margin:0 0 12px}h1{font-size:20px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}th{background:#f4f6f8}.report-summary{display:flex;gap:10px}.report-box{border:1px solid #ddd;padding:8px}.report-box b{display:block;font-size:16px;margin-top:3px} .table-card{border-top:4px solid #263642}.table-scroll{overflow-x:auto;margin-top:16px}.table-scroll table{min-width:760px}.table-close-pcs{width:90px}.table-card .card{min-width:150px}</style></head><body><div class="casino-print-header">86 CASINO</div><h1>'+reportEsc(title)+'</h1>'+clone.innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),150)}
 function downloadReportBlock(id,title){const node=document.getElementById(id);if(!node)return;const rows=[...node.querySelectorAll('tr')];const csv=rows.map(tr=>[...tr.children].map(td=>'"'+String(td.innerText||'').replace(/"/g,'""').replace(/\n/g,' ')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=title.replace(/[^A-Za-z0-9_-]+/g,'_')+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
 function renderMainReports(selectedDate){
@@ -458,7 +492,7 @@ function renderMainReports(selectedDate){
  // Customer In & Out: default to latest 5 active customers; totals always include ALL activity.
  const customersActive=customers.map(c=>{const rs=rows.filter(x=>x.customerId===c.id);const bi=rs.filter(x=>x.type==='BUY_IN').reduce((s,x)=>s+Number(x.usd||0),0);const co=rs.filter(x=>x.type==='CASH_OUT').reduce((s,x)=>s+Number(x.usd||0),0);const lg=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.action==='LOAN_GIVEN'||x.status==='PAID_GIVEN')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);const lr=rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);return {c,bi,co,lg,lr,tin:bi+lg,tout:co+lr,last:latestTime(rs)}}).filter(x=>x.tin||x.tout).sort((a,b)=>b.last-a.last);
  const tin=customersActive.reduce((s,x)=>s+x.tin,0),tout=customersActive.reduce((s,x)=>s+x.tout,0);
- let h=`<div class="report-summary"><div class="report-box">Customers with Activity<b>${customersActive.length}</b></div><div class="report-box">TOTAL IN<b>${reportMoney(tin)}</b></div><div class="report-box">TOTAL OUT<b>${reportMoney(tout)}</b></div><div class="report-box">GRAND RESULT (IN − OUT)<b>${reportMoney(tin-tout)}</b></div></div>`;
+ let h=`<div class="daily-search-panel report-no-print"><div><h3 style="margin:0 0 4px">Search Customer's Daily Record</h3><div class="small">Find a customer and see today's TOTAL IN, TOTAL OUT and RESULT (OUT − IN).</div></div><div class="daily-search-row"><input id="dailyCustomerSearch" placeholder="Search by customer name, ID or mobile number" onkeydown="if(event.key==='Enter')searchDailyCustomerRecord('${date}')"><button class="btn primary" type="button" onclick="searchDailyCustomerRecord('${date}')">Search Customer</button></div><div id="dailyCustomerSearchResult" class="daily-search-result"><div class="small">Enter a customer name, ID or mobile number and click Search Customer.</div></div></div><div class="report-summary"><div class="report-box">Customers with Activity<b>${customersActive.length}</b></div><div class="report-box">TOTAL IN<b>${reportMoney(tin)}</b></div><div class="report-box">TOTAL OUT<b>${reportMoney(tout)}</b></div><div class="report-box">GRAND RESULT (IN − OUT)<b>${reportMoney(tin-tout)}</b></div></div>`;
  h+=customersActive.length?`<div style="overflow:auto"><table><tr><th>Customer</th><th>Buy-In</th><th>CREDIT</th><th>TOTAL IN</th><th>Cash-Out</th><th>DEPOSIT</th><th>TOTAL OUT</th><th>RESULT (OUT − IN)</th></tr>${customersActive.map((x,i)=>`<tr${rowClass(i)}><td><b>${reportEsc(x.c.name)}</b> (${reportEsc(x.c.id)})</td><td>${reportMoney(x.bi)}</td><td>${reportMoney(x.lg)}</td><td><b>${reportMoney(x.tin)}</b></td><td>${reportMoney(x.co)}</td><td>${reportMoney(x.lr)}</td><td><b>${reportMoney(x.tout)}</b></td><td><b>${reportMoney(x.tout-x.tin)}</b></td></tr>`).join('')}</table></div>`:`<div class="report-empty">No customer In & Out transactions recorded on this business date.</div>`;
  section('customerInOutMain','Daily Customer In & Out',h,customersActive.length>5);
  // Loan reports: totals always include ALL transactions; screen defaults to latest 5.
