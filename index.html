@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Casino Master — V1.120</title>
+<title>Casino Master — V1.138</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#f4f6f8;color:#17202a}
 .app{display:flex;min-height:100vh}.side{width:240px;background:#101820;color:#fff;padding:20px;position:fixed;inset:0 auto 0 0}
@@ -151,6 +151,16 @@ html,body{min-height:100%;}
 .daily-search-grid span{display:block;font-size:11px;color:#64748b;margin-bottom:4px}
 .daily-search-grid b{font-size:16px;color:#102744}
 @media(max-width:760px){.daily-search-row{flex-direction:column;align-items:stretch}.daily-search-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* V1.138 — Separate Cashback preparation / approval workflow */
+.cashback-eligible-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px;margin-top:14px}
+.cashback-eligible-card{border:1px solid #dfe6ed;border-radius:12px;padding:12px;background:#fff}
+.cashback-eligible-card .cb-name{font-weight:850;color:#142235}.cashback-eligible-card .cb-result{font-size:18px;font-weight:900;margin-top:5px}
+.cashback-eligible-card .cb-meta{font-size:11px;color:#74808c;margin-top:5px}
+.cashback-history-search{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.cashback-history-search input,.cashback-history-search select{min-width:180px;flex:1}
+.cashback-status-pending{color:#9a6b18;font-weight:800}.cashback-status-approved{color:#2468a8;font-weight:800}.cashback-status-paid{color:#21845d;font-weight:850}
+@media(max-width:900px){.cashback-eligible-grid{grid-template-columns:repeat(2,minmax(200px,1fr))}}
+@media(max-width:620px){.cashback-eligible-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -176,11 +186,11 @@ html,body{min-height:100%;}
 
 const roles={
   "Reception":["dashboard","customers"],
-  "Pit Manager":["dashboard","customers","loans","rewards","reports","balance","tableopening","totaltable"],
+  "Pit Manager":["dashboard","customers","loans","rewards","cashback","reports","balance","tableopening","totaltable"],
   "Cashier":["dashboard","customers","cashier","reports","balance","tableopening","totaltable","tablefillcredit"],
-  "Manager":["dashboard","customers","cashier","loans","rewards","reports","customerwise","balance","settings","tableopening","totaltable"]
+  "Manager":["dashboard","customers","cashier","loans","rewards","cashback","reports","customerwise","balance","settings","tableopening","totaltable"]
 };
-const labels={dashboard:"Dashboard",customers:"Customers",cashier:"Cashier",loans:"Loans",rewards:"Rewards",reports:"Reports",customerwise:"Customer Wise Report",balance:"Daily Balance",settings:"Settings",tableopening:"Table Opening / Closing",totaltable:"Total Table Summary",tablefillcredit:"Table Fill / Credit Record"};
+const labels={dashboard:"Dashboard",customers:"Customers",cashier:"Cashier",loans:"Loans",rewards:"Rewards",reports:"Reports",customerwise:"Customer Wise Report",cashback:"Cash Back",balance:"Daily Balance",settings:"Settings",tableopening:"Table Opening / Closing",totaltable:"Total Table Summary",tablefillcredit:"Table Fill / Credit Record"};
 const defaultUsers=[
   {username:"manager",password:"Manager@123",name:"General Manager",role:"Manager",active:true},
   {username:"reception",password:"Reception@123",name:"Reception",role:"Reception",active:true},
@@ -308,7 +318,7 @@ function nav(){
  initLiveBalanceRefresh();
  initClosedDayObserver();
  const n=document.getElementById("nav");
- const items=["dashboard","customers","cashier","loans","rewards","reports","customerwise","balance","tableopening","totaltable","tablefillcredit","settings"].filter(p=>hasPermission(p));
+ const items=["dashboard","customers","cashier","loans","rewards","cashback","reports","customerwise","balance","tableopening","totaltable","tablefillcredit","settings"].filter(p=>hasPermission(p));
  n.innerHTML=items.map(p=>`<a href="#${p}" data-page="${p}">${labels[p]}</a>`).join("");
  n.querySelectorAll('a[data-page]').forEach(a=>a.addEventListener('click',function(ev){const p=this.dataset.page;ev.preventDefault();if(!requirePermission(p))return;show(p);}));
  updateLoggedIn();
@@ -500,8 +510,8 @@ function renderMainReports(selectedDate){
  const loanTable=(arr,repay)=>arr.length?`<div class="report-summary"><div class="report-box">Total<b>${reportMoney(arr.reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0))}</b></div><div class="report-box">Transactions<b>${arr.length}</b></div></div><div style="overflow:auto"><table><tr><th>#</th><th>Customer</th><th>Amount</th><th>Approved/Collected By</th><th>Paid/Received By</th><th>Reference / Note</th><th>Date / Time</th></tr>${arr.map((x,i)=>`<tr${rowClass(i)}><td>${i+1}</td><td>${reportEsc(customers.find(c=>c.id===x.customerId)?.name||x.customerName||x.customerId)}</td><td>${reportMoney(x.usd!=null?x.usd:x.amount)}</td><td>${reportEsc(x.approvedBy||x.collectedBy||'')}</td><td>${reportEsc(x.paidBy||x.receivedBy||x.staff||'')}</td><td>${reportEsc(x.reference||'')}</td><td>${new Date(x.date).toLocaleString()}</td></tr>`).join('')}</table></div>`:`<div class="report-empty">No loan ${repay?'received back':'paid / given'} on this business date.</div>`;
  section('loanGivenMain','Daily CREDIT',loanTable(loanGiven,false),loanGiven.length>5); section('loanRepayMain','Daily DEPOSIT',loanTable(loanRep,true),loanRep.length>5);
  // Rewards: latest 5 by transaction; totals/counts always include ALL.
- const rewards=rows.filter(x=>x.type==='REWARD'&&x.status==='PAID_GIVEN').sort((a,b)=>new Date(b.date)-new Date(a.date));
- function rewardSec(type,title,unit){const arr=rewards.filter(x=>x.rewardType===type);return `<div class="report-summary"><div class="report-box">${title}<b>${unit} ${arr.reduce((s,x)=>s+Number(x.amount||0),0).toFixed(2)}</b></div><div class="report-box">Paid / Given<b>${arr.length}</b></div></div>`+(arr.length?`<div style="overflow:auto"><table><tr><th>#</th><th>Customer</th><th>Amount</th><th>Approved By</th><th>Paid / Given By</th><th>Date / Time</th></tr>${arr.map((x,i)=>`<tr${rowClass(i)}><td>${i+1}</td><td>${reportEsc(customers.find(c=>c.id===x.customerId)?.name||x.customerName||x.customerId)}</td><td>${unit} ${Number(x.amount||0).toFixed(2)}</td><td>${reportEsc(x.approvedBy||'')}</td><td>${reportEsc(x.paidBy||x.staff||'')}</td><td>${new Date(x.date).toLocaleString()}</td></tr>`).join('')}</table></div>`:`<div class="report-empty">No ${title.toLowerCase()} paid / given on this business date.</div>`)}
+ const rewards=rows.filter(x=>x.type==='REWARD'&&x.status==='PAID_GIVEN'&&(!x.manualCashback||x.manualCashback===true)).sort((a,b)=>new Date(b.date)-new Date(a.date));
+ function rewardSec(type,title,unit){const arr=rewards.filter(x=>x.rewardType===type);return `<div class="report-summary"><div class="report-box">${title}<b>${unit} ${arr.reduce((s,x)=>s+Number(x.amount||0),0).toFixed(2)}</b></div><div class="report-box">Paid / Given<b>${arr.length}</b></div></div>`+(arr.length?`<div style="overflow:auto"><table><tr><th>#</th><th>Customer</th><th>Amount</th><th>Approved By</th><th>Paid / Given By</th><th>Source</th><th>Date / Time</th></tr>${arr.map((x,i)=>`<tr${rowClass(i)}><td>${i+1}</td><td>${reportEsc(customers.find(c=>c.id===x.customerId)?.name||x.customerName||x.customerId)}</td><td>${unit} ${Number(x.amount||0).toFixed(2)}</td><td>${reportEsc(x.approvedBy||'')}</td><td>${reportEsc(x.paidBy||x.staff||'')}</td><td>${x.manualCashback?'Prepared Cashback':'Rewards'}</td><td>${new Date(x.date).toLocaleString()}</td></tr>`).join('')}</table></div>`:`<div class="report-empty">No ${title.toLowerCase()} paid / given on this business date.</div>`)}
  section('cashbackMain','Daily Cashback Report',rewardSec('CASHBACK','Cashback','USD'),rewards.filter(x=>x.rewardType==='CASHBACK').length>5); section('drawMain','Daily Draw / Raffle Report',rewardSec('DAILY_DRAW','Daily Draw / Raffle','USD'),rewards.filter(x=>x.rewardType==='DAILY_DRAW').length>5); section('chipsMain','Daily Lucky Chips Report',rewardSec('LUCKY_CHIPS','Lucky Chips','GHS'),rewards.filter(x=>x.rewardType==='LUCKY_CHIPS').length>5);
  // Collection reports: latest 5 transactions; totals always include ALL.
  const isMomo=x=>/momo/i.test(String(x.method||'')); const isCard=x=>/card|zenith|bank/i.test(String(x.method||''));
@@ -1176,6 +1186,26 @@ if(k==="loans") c.innerHTML=`<div class="panel"><h2>Pit Manager — CREDIT</h2>
 if(k==="loans"){
   setTimeout(()=>{const isPit=currentUser?.role==="Pit Manager"||currentUser?.role==="Manager"; const isCash=currentUser?.role==="Cashier"||currentUser?.role==="Manager"; const panels=[...c.querySelectorAll('.panel')]; panels.forEach((p,i)=>{if(i===0&&!isPit)p.style.display='none'; if(i===1&&!isPit)p.style.display='none'; if((i===2||i===3)&&!isCash&&currentUser?.role!=="Pit Manager"&&currentUser?.role!=="Manager")p.style.display='none';});},0);
 }
+if(k==="cashback") {
+  const isManager=currentUser?.role==="Manager";
+  const isPit=currentUser?.role==="Pit Manager"||isManager;
+  if(!isPit){c.innerHTML='<div class="panel"><h2>Cash Back</h2><div class="small">This section is available to Pit Manager and Manager accounts only.</div></div>';return;}
+  c.innerHTML=`
+  <div class="panel"><h2>Cash Back</h2><div class="small">Separate cashback preparation workflow. Pit Manager prepares and saves the cashback; another Pit Manager can approve it later; Cashier completes payment using the existing Cashier payment process.</div></div>
+  <div class="panel"><h2>Pit Manager — Prepare Cashback</h2>
+    <div class="formgrid">
+      <div class="field"><label>Casino Business Date *</label><input id="cbBizDate" type="date" value="${businessDateForNow()}" max="${businessDateForNow()}" onchange="renderCashbackEligibility()"></div>
+      <div class="field"><label>Eligible Customer *</label><select id="cbCustomer" onchange="updateCashbackCustomerPreview()"><option value="">Select eligible customer</option></select><div id="cbCustomerPreview" class="hint"></div></div>
+      <div class="field"><label>Cashback Amount (USD) *</label><input id="cbAmount" type="number" min="0.01" step="0.01" placeholder="Enter cashback amount"></div>
+      <div class="field"><label>Created By *</label><input id="cbCreatedBy" value="${currentUser?.name||""}" placeholder="Pit Manager name"></div>
+      <div class="field"><label>Reference / Note</label><input id="cbReference" placeholder="Optional"></div>
+    </div>
+    <div class="actions"><button class="btn primary" type="button" onclick="createManualCashback()">Create Cashback</button><button class="btn muted" type="button" onclick="clearManualCashbackForm()">Clear</button></div>
+  </div>
+  <div class="panel"><h2>Eligible Customers</h2><div class="small">Customers with recorded casino activity and a negative daily result (TOTAL OUT − TOTAL IN) are shown as eligible. The cashback amount is entered manually by the Pit Manager.</div><div id="cashbackEligibleList"></div></div>
+  <div class="panel"><h2>Cashback History</h2><div class="small">All separately prepared cashback records remain here, including Pending Approval, Approved, and Paid. Paid records are locked against duplicate payment.</div><div class="cashback-history-search"><input id="cbHistorySearch" type="search" placeholder="Search customer name or ID" oninput="renderCashbackHistory()"><select id="cbHistoryStatus" onchange="renderCashbackHistory()"><option value="">All Statuses</option><option value="PENDING_APPROVAL">Pending Approval</option><option value="PENDING_CASHIER">Approved / Waiting Cashier</option><option value="PAID_GIVEN">Paid</option></select></div><div id="cashbackHistoryBox"></div></div>`;
+  renderCashbackEligibility(); renderCashbackHistory();
+}
 if(k==="rewards") {
   const isApprover=currentUser?.role==="Pit Manager"||currentUser?.role==="Manager";
   const isCashier=currentUser?.role==="Cashier"||currentUser?.role==="Manager";
@@ -1452,11 +1482,53 @@ let now=new Date().toISOString(); pending.status="CASHIER_RECEIVED"; pending.rec
 const repaymentAmount=Number(pending.amount||0); const outstandingAtReceipt=Number(b.balance||0); const advanceGenerated=Math.max(0,repaymentAmount-outstandingAtReceipt); tx.push({id:"TX-"+Date.now(),date:now,customerId:pending.customerId,type:"LOAN",amount:repaymentAmount,action:"LOAN_REPAID",status:"RECEIVED",reference:pending.reference||"",pendingRepaymentId:pending.id,collectedBy:pending.collectedBy||"",staff:cashier,receivedBy:cashier,advanceGenerated,businessDate:businessDateForNow()});
 save(); show("cashier"); alert("Loan repayment received. Cashier: "+cashier);
 }
+function manualCashbackRows(){return tx.filter(x=>x.type==="REWARD"&&x.manualCashback===true).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));}
+function cashbackDailyResult(customerId,businessDate){
+ const rs=reportRowsFor(businessDate).filter(x=>x.customerId===customerId);
+ const totalIn=rs.filter(x=>x.type==='BUY_IN').reduce((s,x)=>s+Number(x.usd||0),0)+rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_PAID'||x.action==='LOAN_GIVEN'||x.status==='PAID_GIVEN')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);
+ const totalOut=rs.filter(x=>x.type==='CASH_OUT').reduce((s,x)=>s+Number(x.usd||0),0)+rs.filter(x=>x.type==='LOAN'&&(x.action==='LOAN_REPAID'||x.status==='RECEIVED')).reduce((s,x)=>s+Number((x.usd!=null?x.usd:x.amount)||0),0);
+ return {totalIn,totalOut,result:totalOut-totalIn,count:rs.length};
+}
+function cashbackEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function cashbackEligibilityRows(date){return customers.map(c=>({c,data:cashbackDailyResult(c.id,date)})).filter(x=>x.data.count>0&&x.data.result<0);}
+function renderCashbackEligibility(){
+ const date=document.getElementById('cbBizDate')?.value||businessDateForNow(), sel=document.getElementById('cbCustomer'), box=document.getElementById('cashbackEligibleList'); if(!box)return;
+ const eligible=cashbackEligibilityRows(date);
+ if(sel){const current=sel.value;sel.innerHTML='<option value="">Select eligible customer</option>'+eligible.map(x=>`<option value="${cashbackEsc(x.c.id)}">${cashbackEsc(x.c.name)} — ${cashbackEsc(x.c.id)} — Lost USD ${Math.abs(x.data.result).toFixed(2)}</option>`).join('');if(eligible.some(x=>x.c.id===current))sel.value=current;}
+ if(!eligible.length){box.innerHTML='<div class="small">No customers with a negative result are eligible for this business date.</div>';return;}
+ box.innerHTML='<div class="cashback-eligible-grid">'+eligible.map(x=>`<div class="cashback-eligible-card"><div class="cb-name">${cashbackEsc(x.c.name)} <span class="small">(${cashbackEsc(x.c.id)})</span></div><div class="cb-result">Lost USD ${Math.abs(x.data.result).toFixed(2)}</div><div class="cb-meta">Total In: USD ${x.data.totalIn.toFixed(2)} &nbsp; | &nbsp; Total Out: USD ${x.data.totalOut.toFixed(2)}<br>${x.data.count} transaction${x.data.count===1?'':'s'}</div><div class="actions" style="margin-top:9px"><button class="btn muted" type="button" onclick="selectCashbackCustomer('${cashbackEsc(x.c.id)}')">Select</button></div></div>`).join('')+'</div>';
+}
+function selectCashbackCustomer(id){const s=document.getElementById('cbCustomer');if(s){s.value=id;updateCashbackCustomerPreview();s.scrollIntoView({behavior:'smooth',block:'center'});}}
+function updateCashbackCustomerPreview(){const e=document.getElementById('cbCustomerPreview'),s=document.getElementById('cbCustomer'),d=document.getElementById('cbBizDate')?.value||businessDateForNow();if(!e||!s)return;const c=customers.find(x=>x.id===s.value);if(!c){e.textContent='Please select an eligible customer.';return;}const r=cashbackDailyResult(c.id,d);e.textContent=`${c.name} — Daily loss: USD ${Math.max(0,-r.result).toFixed(2)} for business date ${d}.`;}
+function clearManualCashbackForm(){['cbAmount','cbReference'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});const s=document.getElementById('cbCustomer');if(s)s.value='';updateCashbackCustomerPreview();}
+function createManualCashback(){
+ if(userRole()!=="Pit Manager"&&userRole()!=="Manager")return alert('Only Pit Manager or Manager can create Cashback.');
+ const date=document.getElementById('cbBizDate')?.value||businessDateForNow(),cid=document.getElementById('cbCustomer')?.value,amount=Number(document.getElementById('cbAmount')?.value||0),creator=(document.getElementById('cbCreatedBy')?.value||'').trim(),reference=(document.getElementById('cbReference')?.value||'').trim();
+ if(!cid)return alert('Select an eligible customer.');if(amount<=0)return alert('Enter a cashback amount greater than zero.');if(!creator)return alert('Enter the Pit Manager name.');
+ const c=customers.find(x=>x.id===cid);if(!c)return alert('Customer not found.');const eligibility=cashbackDailyResult(cid,date);if(eligibility.result>=0)return alert('This customer is not currently eligible because the selected business date does not show a loss.');
+ const duplicate=manualCashbackRows().find(x=>x.customerId===cid&&txBusinessDate(x)===date);if(duplicate)return alert(`A cashback already exists for ${c.name} for business date ${date}. Status: ${duplicate.status}. The same cashback cannot be created or paid twice.`);
+ if(!confirmTxn('CONFIRM CASHBACK PREPARATION',`Customer: ${c.name} (${c.id})\nCasino Business Date: ${date}\nCustomer Loss: USD ${Math.abs(eligibility.result).toFixed(2)}\nCashback Amount: USD ${amount.toFixed(2)}\nCreated By: Pit Manager — ${creator}\nRemark: ${reference||'-'}`))return;
+ const now=new Date().toISOString();tx.push({id:'TX-'+Date.now(),date:now,businessDate:date,customerId:c.id,customerName:c.name,type:'REWARD',rewardType:'CASHBACK',manualCashback:true,amount,unit:'USD',status:'PENDING_APPROVAL',createdBy:creator,createdAt:now,reference,eligibleLoss:Math.abs(eligibility.result)});save();show('cashback');alert(`Cashback prepared for ${c.name}. It is saved and waiting for Pit Manager approval.`);
+}
+function approveManualCashback(id){
+ if(userRole()!=="Pit Manager"&&userRole()!=="Manager")return alert('Only Pit Manager or Manager can approve Cashback.');
+ const x=tx.find(r=>r.id===id&&r.manualCashback===true&&r.type==='REWARD');if(!x)return alert('Cashback record not found.');if(x.status!=='PENDING_APPROVAL')return alert('This cashback is no longer waiting for approval.');
+ const approver=(window.prompt('Enter Pit Manager Name approving this cashback:',currentUser?.name||'')||'').trim();if(!approver)return;
+ const c=customers.find(q=>q.id===x.customerId);if(!confirmTxn('CONFIRM CASHBACK APPROVAL',`Customer: ${c?.name||x.customerId} (${x.customerId})\nCasino Business Date: ${txBusinessDate(x)}\nCashback: USD ${Number(x.amount||0).toFixed(2)}\nCreated By: Pit Manager — ${x.createdBy||'-'}\nApproved By: Pit Manager — ${approver}`))return;
+ x.status='PENDING_CASHIER';x.approvedBy=approver;x.approvedAt=new Date().toISOString();x.action='CASHBACK_APPROVED';save();show('cashback');alert(`Cashback approved for ${c?.name||x.customerId}. It is now waiting for Cashier payment.`);
+}
+function renderCashbackHistory(){
+ const box=document.getElementById('cashbackHistoryBox');if(!box)return;const q=(document.getElementById('cbHistorySearch')?.value||'').trim().toLowerCase(),status=document.getElementById('cbHistoryStatus')?.value||'';
+ const rows=manualCashbackRows().filter(x=>(!q||[x.customerName,x.customerId].join(' ').toLowerCase().includes(q))&&(!status||x.status===status));
+ if(!rows.length){box.innerHTML='<div class="small">No Cashback History records match the selected filter.</div>';return;}
+ box.innerHTML=`<div class="tablewrap"><table><tr><th>Casino Date</th><th>Created</th><th>Customer</th><th>Loss</th><th>Cashback</th><th>Status</th><th>Created By</th><th>Approved By</th><th>Paid By</th><th>Paid Time</th><th>Action</th></tr>${rows.map(x=>{const st=x.status||'';const stText=st==='PENDING_APPROVAL'?'Pending Approval':st==='PENDING_CASHIER'?'Approved / Waiting Cashier':st==='PAID_GIVEN'?'PAID':st;const cls=st==='PAID_GIVEN'?'cashback-status-paid':st==='PENDING_CASHIER'?'cashback-status-approved':'cashback-status-pending';let action='';if(st==='PENDING_APPROVAL')action=`<button class="btn primary" type="button" onclick="approveManualCashback('${x.id}')">Approve</button>`;else if(st==='PAID_GIVEN')action='<span class="pill">🔒 LOCKED</span>';else action='<span class="small">Waiting for Cashier</span>';return `<tr><td>${cashbackEsc(txBusinessDate(x))}</td><td>${new Date(x.createdAt||x.date).toLocaleString()}</td><td><b>${cashbackEsc(x.customerName||x.customerId)}</b><br><span class="small">${cashbackEsc(x.customerId)}</span></td><td>USD ${Number(x.eligibleLoss||0).toFixed(2)}</td><td><b>USD ${Number(x.amount||0).toFixed(2)}</b></td><td class="${cls}">${stText}</td><td>${cashbackEsc(x.createdBy||'-')}</td><td>${cashbackEsc(x.approvedBy||'-')}</td><td>${cashbackEsc(x.paidBy||'-')}</td><td>${x.paidAt?new Date(x.paidAt).toLocaleString():'-'}</td><td>${action}</td></tr>`;}).join('')}</table></div>`;
+}
+
 function rewardUnit(type){return type==="LUCKY_CHIPS"?"GHS":"USD";}
 function rewardLabel(type){return type==="CASHBACK"?"Cashback":type==="LUCKY_CHIPS"?"Lucky Chips":"Daily Draw / Raffle";}
 function updateRewardUnit(){const t=document.getElementById("rewardType")?.value||"CASHBACK";const l=document.getElementById("rewardAmountLabel");if(l)l.textContent=`Amount (${rewardUnit(t)}) *`;}
 function clearRewardForm(){["rewardAmount","rewardRef"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});if(document.getElementById("rewardType"))document.getElementById("rewardType").value="CASHBACK";updateRewardUnit();}
-function rewardRows(status){return tx.filter(x=>x.type==="REWARD"&&(!status||x.status===status)).slice().reverse();}
+function rewardRows(status){return tx.filter(x=>x.type==="REWARD"&&!x.manualCashback&&(!status||x.status===status)).slice().reverse();}
 function updateRewardCustomerPreview(){
  const e=document.getElementById("rewardCustomerPreview"), sel=document.getElementById("rewardCust");
  if(!e||!sel)return;
@@ -1474,8 +1546,10 @@ function approveReward(){if(!guardBusinessDateOpen(businessDateForNow()))return 
  save(); show("rewards"); alert(`${label} approved for ${c.name}. It is now waiting for Cashier Pay / Give.`);
 }
 
-function payReward(id){if(!guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
- const approval=tx.find(x=>x.id===id&&x.type==="REWARD"&&x.action!=="REWARD_PAID_GIVEN"&&x.status==="PENDING_CASHIER"); if(!approval)return alert("This reward is no longer pending.");
+function payReward(id){
+ const approval=tx.find(x=>x.id===id&&x.type==="REWARD"&&x.action!=="REWARD_PAID_GIVEN"&&x.status==="PENDING_CASHIER"); if(!approval)return alert("This reward is no longer pending or has already been paid.");
+ if(approval.manualCashback===true && approval.status!=="PENDING_CASHIER")return alert("This cashback is not approved for payment.");
+ if(!approval.manualCashback && !guardBusinessDateOpen(businessDateForNow()))return alert('This Business Date is closed. Only Manager can make corrections.');
  const cashier=(window.prompt("Enter Cashier Name who paid / gave the reward:",currentUser?.name||"")||"").trim(); if(!cashier)return;
  const c=customers.find(x=>x.id===approval.customerId), label=rewardLabel(approval.rewardType), unit=approval.unit||rewardUnit(approval.rewardType);
  if(!confirmTxn("CONFIRM REWARD PAY / GIVE",`Customer: ${c?.name||approval.customerId} (${approval.customerId})\nReward: ${label}\nAmount: ${unit} ${Number(approval.amount||0).toFixed(2)}\nApproved By: Pit Manager — ${approval.approvedBy||""}\nPaid / Given By: Cashier — ${cashier}\nRemark: ${approval.reference||"-"}`))return;
@@ -1492,9 +1566,9 @@ function rewardHistoryTable(type){
 }
 function pendingRewardTable(){
  const currentDate=currentCashierHistoryDate();
- const rows=rewardRows("PENDING_CASHIER").filter(x=>txBusinessDate(x)===currentDate); if(!rows.length)return '<div class="small">No approved rewards are waiting for Cashier Pay / Give.</div>';
+ const rows=tx.filter(x=>x.type==="REWARD"&&x.status==="PENDING_CASHIER"&&(!x.manualCashback||x.manualCashback===true&&x.rewardType==="CASHBACK")&& (x.manualCashback===true || txBusinessDate(x)===currentDate)).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)); if(!rows.length)return '<div class="small">No approved rewards are waiting for Cashier Pay / Give.</div>';
  const canPay=currentUser?.role==="Cashier"||currentUser?.role==="Manager";
- return `<table><tr><th>Date / Time</th><th>Customer</th><th>Reward</th><th>Amount</th><th>Approved By</th><th>Reference</th>${canPay?'<th>Cashier Action</th>':''}</tr>${rows.map(x=>{const c=customers.find(q=>q.id===x.customerId)||{},unit=x.unit||rewardUnit(x.rewardType),label=rewardLabel(x.rewardType);return `<tr><td>${new Date(x.date).toLocaleString()}</td><td><b>${x.customerName||c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td>${label}</td><td><b>${unit} ${Number(x.amount||0).toFixed(2)}</b></td><td>${x.approvedBy||"Pit Manager"}</td><td>${x.reference||""}</td>${canPay?`<td><button class="btn success" type="button" onclick="payReward('${x.id}')">Pay / Give</button></td>`:''}</tr>`}).join('')}</table>`;
+ return `<table><tr><th>Date / Time</th><th>Casino Date</th><th>Customer</th><th>Reward</th><th>Amount</th><th>Approved By</th><th>Reference</th>${canPay?'<th>Cashier Action</th>':''}</tr>${rows.map(x=>{const c=customers.find(q=>q.id===x.customerId)||{},unit=x.unit||rewardUnit(x.rewardType),label=rewardLabel(x.rewardType);return `<tr><td>${new Date(x.date).toLocaleString()}</td><td>${txBusinessDate(x)}</td><td><b>${x.customerName||c.name||x.customerId}</b><br><span class="small">${x.customerId}</span></td><td>${label}${x.manualCashback?' <span class="pill">PREPARED</span>':''}</td><td><b>${unit} ${Number(x.amount||0).toFixed(2)}</b></td><td>${x.approvedBy||"Pit Manager"}</td><td>${x.reference||""}</td>${canPay?`<td><button class="btn success" type="button" onclick="payReward('${x.id}')">Pay / Give</button></td>`:''}</tr>`}).join('')}</table>`;
 }
 function renderRewardsPage(){const h=document.getElementById("rewardHistoryBox");if(h)h.innerHTML=rewardHistoryTable("CASHBACK")+'<div style="height:18px"></div>'+rewardHistoryTable("DAILY_DRAW")+'<div style="height:18px"></div>'+rewardHistoryTable("LUCKY_CHIPS");updateRewardUnit();updateRewardCustomerPreview();}
 function printRewardHistory(type){
