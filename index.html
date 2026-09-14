@@ -162,6 +162,17 @@ html,body{min-height:100%;}
 @media(max-width:900px){.cashback-eligible-grid{grid-template-columns:repeat(2,minmax(200px,1fr))}}
 @media(max-width:620px){.cashback-eligible-grid{grid-template-columns:1fr}}
 </style>
+
+<style id="version-label-style">
+.app-version-label{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.3px;
+  opacity:.72;
+  text-align:center;
+  margin-top:2px;
+}
+</style>
 </head>
 <body>
 <div id="loginOverlay" class="login-overlay"><div class="login-box">
@@ -172,7 +183,8 @@ html,body{min-height:100%;}
 <div id="loginError" class="login-error"></div>
 </div></div>
 <div class="app">
-<aside class="side"><div class="brand"><img class="casino-real-logo" src="logo.png" alt="86 CASINO"><small>MANAGEMENT SYSTEM</small></div><div class="nav" id="nav"></div></aside>
+<aside class="side"><div class="brand"><img class="casino-real-logo" src="logo.png" alt="86 CASINO">
+<div class="app-version-label">V1.139</div><small>MANAGEMENT SYSTEM</small></div><div class="nav" id="nav"></div></aside>
 <main class="main"><div class="top"><div><h1 id="title" style="margin:0;font-size:26px">Dashboard</h1><div id="subtitle" class="user">Central casino control</div></div><div class="user">Logged in: <b id="role">General Manager</b></div></div><div id="content"></div></main>
 </div>
 <script>
@@ -1518,8 +1530,15 @@ function approveManualCashback(id){
  x.status='PENDING_CASHIER';x.approvedBy=approver;x.approvedAt=new Date().toISOString();x.action='CASHBACK_APPROVED';save();show('cashback');alert(`Cashback approved for ${c?.name||x.customerId}. It is now waiting for Cashier payment.`);
 }
 function renderCashbackHistory(){
- const box=document.getElementById('cashbackHistoryBox');if(!box)return;const q=(document.getElementById('cbHistorySearch')?.value||'').trim().toLowerCase(),status=document.getElementById('cbHistoryStatus')?.value||'';
- const rows=manualCashbackRows().filter(x=>(!q||[x.customerName,x.customerId].join(' ').toLowerCase().includes(q))&&(!status||x.status===status));
+ const box=document.getElementById('cashbackHistoryBox');if(!box)return;const q=(document.getElementById('cbHistorySearch')?.value||'').trim().toLowerCase(),status=document.getElementById('cbHistoryStatus')?.value||'',currentDate=businessDateForNow();
+ // Daily list: unpaid cashbacks stay visible until paid. Paid records are visible on their payment business date only. A search includes all historical records, including old paid cashbacks.
+ const rows=manualCashbackRows().filter(x=>{
+   const matchesSearch=!q||[x.customerName,x.customerId].join(' ').toLowerCase().includes(q);
+   const isPaid=x.status==='PAID_GIVEN';
+   const visibleDaily=!isPaid||txBusinessDate(x)===currentDate;
+   const matchesStatus=!status||x.status===status;
+   return matchesSearch&&matchesStatus&&(q||visibleDaily);
+ });
  if(!rows.length){box.innerHTML='<div class="small">No Cashback History records match the selected filter.</div>';return;}
  box.innerHTML=`<div class="tablewrap"><table><tr><th>Casino Date</th><th>Created</th><th>Customer</th><th>Loss</th><th>Cashback</th><th>Status</th><th>Created By</th><th>Approved By</th><th>Paid By</th><th>Paid Time</th><th>Action</th></tr>${rows.map(x=>{const st=x.status||'';const stText=st==='PENDING_APPROVAL'?'Pending Approval':st==='PENDING_CASHIER'?'Approved / Waiting Cashier':st==='PAID_GIVEN'?'PAID':st;const cls=st==='PAID_GIVEN'?'cashback-status-paid':st==='PENDING_CASHIER'?'cashback-status-approved':'cashback-status-pending';let action='';if(st==='PENDING_APPROVAL')action=`<button class="btn primary" type="button" onclick="approveManualCashback('${x.id}')">Approve</button>`;else if(st==='PAID_GIVEN')action='<span class="pill">🔒 LOCKED</span>';else action='<span class="small">Waiting for Cashier</span>';return `<tr><td>${cashbackEsc(txBusinessDate(x))}</td><td>${new Date(x.createdAt||x.date).toLocaleString()}</td><td><b>${cashbackEsc(x.customerName||x.customerId)}</b><br><span class="small">${cashbackEsc(x.customerId)}</span></td><td>USD ${Number(x.eligibleLoss||0).toFixed(2)}</td><td><b>USD ${Number(x.amount||0).toFixed(2)}</b></td><td class="${cls}">${stText}</td><td>${cashbackEsc(x.createdBy||'-')}</td><td>${cashbackEsc(x.approvedBy||'-')}</td><td>${cashbackEsc(x.paidBy||'-')}</td><td>${x.paidAt?new Date(x.paidAt).toLocaleString():'-'}</td><td>${action}</td></tr>`;}).join('')}</table></div>`;
 }
